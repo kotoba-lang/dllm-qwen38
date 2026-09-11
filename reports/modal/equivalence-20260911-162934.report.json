@@ -1,0 +1,94 @@
+{
+ "block": 32,
+ "nblocks": 4,
+ "seq_len": 128,
+ "layers": 16,
+ "layer_types": [
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention",
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention",
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention",
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention"
+ ],
+ "dtype": "torch.float32",
+ "device": "cuda",
+ "seconds": 3.78,
+ "checks": [
+  {
+   "name": "noised-stream-vs-oracle",
+   "max_abs_diff": 3.5762786865234375e-05,
+   "tol": 0.001,
+   "pass": true
+  },
+  {
+   "name": "clean-stream-vs-oracle",
+   "max_abs_diff": 1.9073486328125e-05,
+   "tol": 0.001,
+   "pass": true
+  },
+  {
+   "name": "xt-block-k-ignores-xt-block-k-1",
+   "max_abs_diff": 0.0,
+   "tol": 0.001,
+   "pass": true
+  },
+  {
+   "name": "xt-block-k-ignores-x0-block-k",
+   "max_abs_diff": 0.0,
+   "tol": 0.001,
+   "pass": true
+  },
+  {
+   "name": "xt-block-k-reacts-to-x0-block-k-1",
+   "min_abs_diff": 2.508847713470459,
+   "floor": 0.01,
+   "pass": true
+  }
+ ],
+ "faults": [
+  {
+   "fault": "concat-causal-gdn",
+   "max_abs_diff": 11.526604652404785,
+   "tol": 0.001,
+   "detected": true
+  },
+  {
+   "fault": "mask-leak",
+   "max_abs_diff": 1.466904640197754,
+   "tol": 0.001,
+   "detected": true
+  },
+  {
+   "fault": "no-conv-prefix",
+   "max_abs_diff": 12.097681999206543,
+   "tol": 0.001,
+   "detected": true
+  }
+ ],
+ "checks_passed": 5,
+ "checks_total": 5,
+ "faults_detected": 3,
+ "faults_total": 3,
+ "model": "Qwen/Qwen3.8-27B",
+ "oracle_gdn_kernel": "torch-reference",
+ "vocab": {
+  "embedding_rows": 248320,
+  "tokenizer_len": 248077,
+  "spare_rows": 243
+ },
+ "exit": 0,
+ "wall_total_s": 29.5,
+ "run_dir": "/cache/runs/equivalence-20260911-162934",
+ "gpu": "NVIDIA H100 80GB HBM3, 81559 MiB"
+}

@@ -1,0 +1,92 @@
+✓ Initialized. View run at 
+https://modal.com/apps/junkawasakicom/main/ap-R5IdJT0Q2kn9ZVT0qPjUZY
+Building image im-6FJzOHrOwh4M7dSUYUGpJb
+
+Using legacy Image Builder version. We suggest upgrading at https://modal.com/settings/image-config.
+
+=> Step 0: FROM base
+
+=> Step 1: ENV HF_HOME=/cache/hf
+
+=> Step 2: ENV HF_XET_HIGH_PERFORMANCE=1
+
+=> Step 3: ENV TOKENIZERS_PARALLELISM=false
+
+=> Step 4: ENV PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+Saving image...
+Image saved, took 1.73s
+
+Built image im-6FJzOHrOwh4M7dSUYUGpJb in 2.52s
+
+
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/modal
+│   _app.py
+├── 🔨 Created mount 
+│   /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/src/d
+│   llm_qwen38
+├── 🔨 Created function equivalence_remote.
+└── 🔨 Created function train_remote.
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/473 [00:00<01:14,  6.32it/s]
+[1ALoading weights:   8%|▊         | 40/473 [00:00<00:02, 177.81it/s]
+[1ALoading weights:  19%|█▉        | 90/473 [00:00<00:01, 301.14it/s]
+[1ALoading weights:  32%|███▏      | 152/473 [00:00<00:00, 413.62it/s]
+[1ALoading weights:  45%|████▍     | 212/473 [00:00<00:00, 475.47it/s]
+[1ALoading weights:  59%|█████▊    | 277/473 [00:00<00:00, 525.85it/s]
+[1ALoading weights:  79%|███████▉  | 375/473 [00:00<00:00, 655.70it/s]
+[1ALoading weights: 100%|██████████| 473/473 [00:00<00:00, 551.47it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+/root/dllm_qwen38/train.py:144: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  losses.append(float(loss))
+step 10 loss 5.3670     targets 1168    seq-tok/s 1152  elapsed 18s
+step 20 loss 5.2531     targets 1594    seq-tok/s 1633  elapsed 25s
+step 30 loss 4.7233     targets 1749    seq-tok/s 1891  elapsed 32s
+step 40 loss 4.8885     targets 1839    seq-tok/s 2047  elapsed 40s
+step 50 loss 4.5644     targets 1163    seq-tok/s 2121  elapsed 48s
+step 60 loss 4.1477     targets 1579    seq-tok/s 2213  elapsed 56s
+step 70 loss 4.3009     targets 1646    seq-tok/s 2282  elapsed 63s
+step 80 loss 4.8316     targets 1384    seq-tok/s 2351  elapsed 70s
+step 90 loss 4.1322     targets 1784    seq-tok/s 2405  elapsed 77s
+step 100        loss 4.4754     targets 1385    seq-tok/s 2447  elapsed 84s
+step 110        loss 4.4364     targets 1275    seq-tok/s 2482  elapsed 91s
+step 120        loss 4.3256     targets 1933    seq-tok/s 2507  elapsed 98s
+step 130        loss 3.7897     targets 1410    seq-tok/s 2530  elapsed 105s
+step 140        loss 4.3414     targets 1581    seq-tok/s 2537  elapsed 113s
+step 150        loss 4.2965     targets 1616    seq-tok/s 2547  elapsed 121s
+step 160        loss 4.2245     targets 1582    seq-tok/s 2566  elapsed 128s
+step 170        loss 4.4946     targets 1476    seq-tok/s 2584  elapsed 135s
+step 180        loss 4.3473     targets 1409    seq-tok/s 2571  elapsed 143s
+step 190        loss 4.2143     targets 1646    seq-tok/s 2574  elapsed 151s
+step 200        loss 3.9499     targets 1701    seq-tok/s 2576  elapsed 159s
+TRAIN   steps 200       skipped 0       loss 11.2152 -> 3.9499  seq-tok/s 2576  peak_mem_gib 53.1       159s
+{
+ "steps": 200,
+ "skipped_steps": 0,
+ "loss_first": 11.215171813964844,
+ "loss_last": 3.949861526489258,
+ "loss_mean_last10": 4.319845604896545,
+ "seq_tokens": 409600,
+ "seq_tokens_per_s": 2576.1905665199256,
+ "seconds": 158.99444913864136,
+ "peak_mem_gib": 53.1,
+ "model": "Qwen/Qwen3.5-0.8B",
+ "data": "nvidia/Llama-Nemotron-Post-Training-Dataset",
+ "block": 32,
+ "seq_len": 512,
+ "batch": 4,
+ "lr": 1e-05,
+ "device": "cuda",
+ "dtype": "bfloat16",
+ "exit": 0,
+ "wall_total_s": 167.6,
+ "run_dir": "/cache/runs/train-20260911-162547",
+ "gpu": "NVIDIA H100 80GB HBM3, 81559 MiB"
+}
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/junkawasakicom/main/ap-R5IdJT0Q2kn9ZVT0qPjUZY
+exit=0

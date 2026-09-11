@@ -25,3 +25,41 @@ def test_layer_truncation_runs_the_first_n_layers_only():
     assert rep["layers"] == 3
     assert rep["layer_types"] == ["linear_attention", "linear_attention", "linear_attention"]
     assert rep["checks_passed"] == rep["checks_total"]
+
+
+def test_batched_forward_equals_per_row_and_oracle():
+    import torch
+
+    from dllm_qwen38.blockdiff import block_diffusion_forward, reference_block_logits
+
+    text_model, lm_head = tiny_text_model(seed=2)
+    block, nb, B = 8, 3, 3
+    torch.manual_seed(2)
+    x0 = torch.randint(0, 256, (B, block * nb))
+    xt = x0.clone()
+    xt[torch.rand(B, block * nb) < 0.5] = 255
+    with torch.no_grad():
+        lt, l0 = block_diffusion_forward(text_model, lm_head, x0, xt, block)
+        rows = [block_diffusion_forward(text_model, lm_head, x0[i : i + 1], xt[i : i + 1], block)[0] for i in range(B)]
+        ref = reference_block_logits(text_model, lm_head, x0, xt, block)
+    assert lt.shape == (B, block * nb, 256)
+    assert float((lt - torch.cat(rows, 0)).abs().max()) < 1e-5
+    assert float((lt - ref).abs().max()) < 1e-3
+
+
+def test_training_loop_learns_the_rule_and_lr_zero_does_not():
+    import torch
+
+    from dllm_qwen38.train import synthetic_batches, train
+
+    torch.set_num_threads(1)
+    text_model, lm_head = tiny_text_model(seed=3)
+    b = synthetic_batches(4, 32, 256, 8, seed=3)
+    rep = train(text_model, lm_head, b, block=8, mask_id=255, steps=100, lr=3e-3, device="cpu", log=lambda *_: None)
+    assert rep["skipped_steps"] == 0
+    assert rep["loss_last"] < 0.5 * rep["loss_first"], (rep["loss_first"], rep["loss_last"])
+
+    text_model, lm_head = tiny_text_model(seed=3)
+    b = synthetic_batches(4, 32, 256, 8, seed=3)
+    rep0 = train(text_model, lm_head, b, block=8, mask_id=255, steps=30, lr=0.0, device="cpu", log=lambda *_: None)
+    assert abs(rep0["loss_last"] - rep0["loss_first"]) < 0.05 * rep0["loss_first"]

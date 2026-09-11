@@ -100,17 +100,21 @@ def block_diffusion_forward(
     *,
     fault: BreakMode | None = None,
     layers: int | None = None,
+    output: str = "logits",
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Training-time forward. Returns (logits_t [1, L, V], logits_0 [1, L, V]).
+    """Training-time forward. Returns (logits_t [B, L, V], logits_0 [B, L, V]) — or, with
+    output="hidden", the final-normed hidden states [B, L, D] of both streams so the caller can
+    project only the positions it scores (a full [B, L, 248k] logits tensor is what OOMed an
+    80 GB H100 at batch 8 × 512 on the 0.8B, measured 2026-09-12).
 
-    x0_ids / xt_ids: [1, L] with L a multiple of `block`. `layers` truncates the stack (the 27B
+    x0_ids / xt_ids: [B, L] with L a multiple of `block`. `layers` truncates the stack (the 27B
     first-N-layers run of ADR-2609112640 §3a).
     """
     fault = fault or BreakMode()
     cfg = text_model.config
-    if x0_ids.shape != xt_ids.shape or x0_ids.shape[0] != 1:
-        raise ValueError("x0_ids and xt_ids must both be [1, L]")
-    L = x0_ids.shape[1]
+    if x0_ids.shape != xt_ids.shape or x0_ids.ndim != 2:
+        raise ValueError("x0_ids and xt_ids must both be [B, L]")
+    B, L = x0_ids.shape
     if L % block:
         raise ValueError(f"L={L} is not a multiple of block={block}")
     nb = L // block
@@ -135,18 +139,21 @@ def block_diffusion_forward(
             else:
                 # pass 1: clean stream, block-causal by construction; keep S_k and the conv tail
                 o0, states0, raw0 = gdn_mixer_forward(m, n0, chunk_size=block)
-                # pass 2: every noised block is a batch row starting from the clean prefix state
-                init = torch.cat([torch.zeros_like(states0[:, :1]), states0[:, :-1]], 1)[0]  # [nb, H, K, V]
+                # pass 2: every (sequence, block) pair is a batch row starting from the state of
+                # the clean prefix before it: rows ordered (b, k) → b*nb + k
+                init = torch.cat([torch.zeros_like(states0[:, :1]), states0[:, :-1]], 1)  # [B, nb, H, K, V]
+                init = init.reshape(B * nb, *init.shape[2:])
                 kmin1 = m.conv_kernel_size - 1
                 if fault.drop_conv_prefix:
                     prefix = None
                 else:
                     padded = torch.cat([torch.zeros_like(raw0[:, :, :kmin1]), raw0], 2)  # zero pad = seq start
-                    prefix = torch.stack([padded[0, :, k * block : k * block + kmin1] for k in range(nb)], 0)
+                    # [B, C, nb, kmin1] → [B*nb, C, kmin1]
+                    prefix = padded.unfold(2, kmin1, block)[:, :, :nb].permute(0, 2, 1, 3).reshape(B * nb, -1, kmin1)
                 ot, _, _ = gdn_mixer_forward(
-                    m, nt.reshape(nb, block, -1), chunk_size=block, conv_prefix=prefix, initial_state=init
+                    m, nt.reshape(B * nb, block, -1), chunk_size=block, conv_prefix=prefix, initial_state=init
                 )
-                ot = ot.reshape(1, L, -1)
+                ot = ot.reshape(B, L, -1)
         elif kind == FULL:
             out, _ = layer.self_attn(
                 hidden_states=torch.cat([nt, n0], 1), position_embeddings=pos_cat, attention_mask=attn_mask
@@ -158,7 +165,10 @@ def block_diffusion_forward(
         h0 = h0 + layer.mlp(layer.post_attention_layernorm(h0))
         ht = ht + layer.mlp(layer.post_attention_layernorm(ht))
 
-    return lm_head(text_model.norm(ht)), lm_head(text_model.norm(h0))
+    ht, h0 = text_model.norm(ht), text_model.norm(h0)
+    if output == "hidden":
+        return ht, h0
+    return lm_head(ht), lm_head(h0)
 
 
 @torch.no_grad()
@@ -176,6 +186,7 @@ def reference_block_logits(
     try:
         outs = []
         for k in range(nb):
+            # one HF call per block; rows of the batch are independent sequences of equal length
             seq = torch.cat([x0_ids[:, : k * block], xt_ids[:, k * block : (k + 1) * block]], 1)
             mask = block_causal_mask(seq.shape[1], block, text_model.embed_tokens.weight.dtype, seq.device)
             hs = text_model(input_ids=seq, attention_mask={FULL: mask, LINEAR: None}, use_cache=False).last_hidden_state

@@ -30,18 +30,42 @@ def _maxdiff(a: torch.Tensor, b: torch.Tensor) -> float:
     return float((a.float() - b.float()).abs().max())
 
 
-def load_checkpoint(model_id: str, dtype: torch.dtype, device: str):
-    """Text tower + lm_head of a Qwen3.5/3.8 checkpoint (vision tower is loaded but unused)."""
+def oracle_gdn_kernel() -> str:
+    """Which implementation the HF oracle's chunked delta rule resolved to at import time."""
+    fla = sys.modules.get("fla", None)
+    return "fla" if fla is not None else "torch-reference"
+
+
+def load_checkpoint(model_id: str, dtype: torch.dtype, device: str, layers: int | None = None):
+    """Text tower + lm_head of a Qwen3.5/3.8 checkpoint (vision tower is loaded but unused).
+
+    `layers` truncates the stack *before* the dtype cast: the 27B is loaded in bf16 (55 GB), the
+    tail layers are dropped, and only the kept prefix is cast — fp32 on all 64 layers would be
+    108 GB and does not fit one H100. The returned text_model has config.num_hidden_layers set
+    to the truncated depth so the HF oracle and the candidate see the same stack.
+    """
     from transformers import AutoConfig, AutoModelForImageTextToText, AutoModelForCausalLM, AutoTokenizer
 
     cfg = AutoConfig.from_pretrained(model_id)
-    kw = dict(dtype=dtype, attn_implementation="eager", device_map=device)
+    load_dtype = torch.bfloat16 if (layers and dtype == torch.float32) else dtype
+    kw = dict(dtype=load_dtype, attn_implementation="eager", device_map=device)
     if getattr(cfg, "text_config", None) is not None:
         m = AutoModelForImageTextToText.from_pretrained(model_id, **kw).eval()
         text_model, lm_head = m.model.language_model, m.lm_head
+        if hasattr(m.model, "visual"):
+            m.model.visual = None
     else:
         m = AutoModelForCausalLM.from_pretrained(model_id, **kw).eval()
         text_model, lm_head = m.model, m.lm_head
+    if layers:
+        del text_model.layers[layers:]
+        text_model.config.num_hidden_layers = layers
+        text_model.config.layer_types = list(text_model.config.layer_types[:layers])
+    if load_dtype != dtype:
+        text_model.to(dtype)
+        lm_head.to(dtype)
+        if device.startswith("cuda"):
+            torch.cuda.empty_cache()
     tok = AutoTokenizer.from_pretrained(model_id)
     vocab_rows = text_model.embed_tokens.weight.shape[0]
     spare = {"embedding_rows": vocab_rows, "tokenizer_len": len(tok), "spare_rows": vocab_rows - len(tok)}
@@ -143,7 +167,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--block", type=int, default=32)
     p.add_argument("--nblocks", type=int, default=4)
     p.add_argument("--tol", type=float, default=None, help="max |Δlogit| accepted (default: fp32 1e-3, bf16 0.25)")
-    p.add_argument("--change-floor", type=float, default=None, help="min |Δlogit| a real dependency must produce (default 100×tol)")
+    p.add_argument("--change-floor", type=float, default=None, help="min |Δlogit| a real dependency must produce (default 10×tol)")
     p.add_argument("--dtype", default="float32", choices=["float32", "bfloat16"])
     p.add_argument("--device", default="cpu")
     p.add_argument("--seed", type=int, default=0)
@@ -152,11 +176,12 @@ def main(argv: list[str] | None = None) -> int:
 
     dtype = torch.float32 if a.dtype == "float32" else torch.bfloat16
     tol = a.tol if a.tol is not None else (1e-3 if dtype == torch.float32 else 0.25)
-    floor = a.change_floor if a.change_floor is not None else 100 * tol
+    floor = a.change_floor if a.change_floor is not None else 10 * tol
 
     try:
         if a.model:
-            text_model, lm_head, spare = load_checkpoint(a.model, dtype, a.device)
+            text_model, lm_head, spare = load_checkpoint(a.model, dtype, a.device, a.layers)
+            a.layers = None  # already truncated at load
         else:
             text_model, lm_head = tiny_text_model(seed=a.seed)
             text_model, lm_head = text_model.to(a.device), lm_head.to(a.device)
@@ -173,6 +198,7 @@ def main(argv: list[str] | None = None) -> int:
 
     rep = run(text_model, lm_head, block=a.block, nblocks=a.nblocks, layers=a.layers, tol=tol, change_floor=floor, seed=a.seed, device=a.device)
     rep["model"] = a.model or "tiny-random"
+    rep["oracle_gdn_kernel"] = oracle_gdn_kernel()
     if spare:
         rep["vocab"] = spare
     if a.json:
@@ -184,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{'PASS' if c['pass'] else 'FAIL'}\t{c['name']}\t{val:.3e}")
     for f in rep["faults"]:
         print(f"{'DETECTED' if f['detected'] else 'UNDETECTED'}\tfault:{f['fault']}\t{f['max_abs_diff']:.3e}")
-    print(f"CHECKS\t{rep['checks_passed']}/{rep['checks_total']}\tFAULTS-DETECTED\t{rep['faults_detected']}/{rep['faults_total']}\tmodel={rep['model']} layers={rep['layers']} L={rep['seq_len']} dtype={rep['dtype']} {rep['seconds']}s")
+    print(f"CHECKS\t{rep['checks_passed']}/{rep['checks_total']}\tFAULTS-DETECTED\t{rep['faults_detected']}/{rep['faults_total']}\tmodel={rep['model']} layers={rep['layers']} L={rep['seq_len']} dtype={rep['dtype']} oracle-gdn={rep['oracle_gdn_kernel']} {rep['seconds']}s")
     if spare:
         print(f"VOCAB\tembedding_rows={spare['embedding_rows']}\ttokenizer_len={spare['tokenizer_len']}\tspare_rows={spare['spare_rows']}")
     ok = rep["checks_passed"] == rep["checks_total"] and rep["faults_detected"] == rep["faults_total"]

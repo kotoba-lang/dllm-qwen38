@@ -56,33 +56,78 @@ uv venv .venv --python 3.12 && uv pip install --python .venv/bin/python -e ".[te
 .venv/bin/python -m pytest -q tests                       # tiny random model, seconds, no download
 .venv/bin/python -m dllm_qwen38.equivalence --block 32 --nblocks 4            # tiny, block 32
 .venv/bin/python -m dllm_qwen38.equivalence --model Qwen/Qwen3.5-0.8B --block 32 --nblocks 4 --json reports/x.json
-.venv/bin/python -m dllm_qwen38.equivalence --model Qwen/Qwen3.8-27B --layers 8 --device cuda --dtype bfloat16
+modal run modal_app.py::equivalence --model Qwen/Qwen3.8-27B --layers 16 --dtype float32   # H100
+modal run modal_app.py::train_run --model Qwen/Qwen3.5-0.8B --steps 200                   # H100
 ```
 
-`--layers N` truncates the stack so the 27B run fits one GPU (ADR §3a: "27B の先頭数層を切り出して
-1 GPU 上で"). With `--model` the report also prints how many embedding rows are unused by the
-tokenizer — the `[MASK]` row question the ADR left unverified.
+`--layers N` truncates the stack *at load* (bf16 load, drop the tail, cast the prefix) so the 27B
+fits one GPU in fp32 (ADR §3a: "27B の先頭数層を切り出して 1 GPU 上で"). `--oracle-kernels
+reference|fla` (Modal) selects whether the HF oracle runs its torch reference or fla's Triton
+kernel; the report names which. With `--model` the report also prints how many embedding rows
+are unused by the tokenizer — the `[MASK]` row question the ADR left unverified.
 
 ## Measured (see `reports/`)
 
-2026-09-12, Apple M1 Max, CPU, float32, HF reference kernels (no fla / causal_conv1d), tol 1e-3:
+### §3a equivalence
 
-| model | layers | L | oracle Δ (x_t / x_0) | ignores x_t k−1 / x_0 k | reacts to x_0 k−1 | faults detected | wall |
-|---|---|---|---|---|---|---|---|
-| tiny random Qwen3.5 config | 8 (6 DeltaNet + 2 attn) | 128 | 8.3e-7 / 8.3e-7 | 0 / 0 | 0.42 | 3/3 (0.39, 0.58, 0.39) | 2.7 s |
-| `Qwen/Qwen3.5-0.8B` (`2fc06364`) | 24 (18 + 6) | 128 | 7.1e-5 / 4.8e-5 | 0 / 0 | 4.5 | 3/3 (17.1, 6.1, 3.7) | 702 s |
+| model | layers | L | dtype / oracle GDN | oracle Δ (x_t / x_0) | ignores x_t k−1 / x_0 k | reacts to x_0 k−1 | faults detected | where |
+|---|---|---|---|---|---|---|---|---|
+| tiny random Qwen3.5 config | 8 (6+2) | 128 | fp32 / torch | 8.3e-7 / 8.3e-7 | 0 / 0 | 0.42 | 3/3 (0.39, 0.58, 0.39) | M1 Max CPU, 2.7 s |
+| `Qwen/Qwen3.5-0.8B` (`2fc06364`) | 24 (18+6) | 128 | fp32 / torch | 7.1e-5 / 4.8e-5 | 0 / 0 | 4.5 | 3/3 (17.1, 6.1, 3.7) | M1 Max CPU, 702 s |
+| **`Qwen/Qwen3.8-27B`** (`1d4bf0f2`) | **16 (12+4)** | 128 | **fp32 / torch** | **3.6e-5 / 1.9e-5** | **0 / 0** | 2.5 | **3/3 (11.5, 1.47, 12.1)** | Modal H100, 2026-09-12 |
+| `Qwen/Qwen3.8-27B` | 64 (48+16) | 128 | bf16 / torch | 0.59 / 0.35 | 0 / 0 | 9.3 | 3/3 (24.8, 14.9, 18.3) | Modal H100 |
+| `Qwen/Qwen3.8-27B` | 64 (48+16) | 128 | bf16 / fla Triton | 1.31 / 0.38 | 0 / 0 | 9.3 | 3/3 (24.7, 14.9, 18.3) | Modal H100 |
 
-The 0.8B run also answers one of the ADR's unverified items for that checkpoint: 248,320 embedding
-rows vs 248,077 tokenizer entries = **243 spare rows**, so `[MASK]` needs no embedding resize there.
-The 27B tokenizer length has not been measured (same declared vocab size; not the same evidence).
+The bold row is the ADR's §3a on the 27B itself, at fp32 tolerance 1e-3: the state fork agrees
+with the unmodified HF model to 3.6e-5 and every fault is caught. The two bf16 rows do **not**
+pass tol 0.25 — even the *clean* stream (same math, chunk 32 vs HF chunk 64) drifts 0.35 through 64
+bf16 layers, so bf16 is not a precision at which this test can be read; the structural checks are
+still exact zeros and the faults sit 25–40× above the drift. fla's Triton kernel vs HF's torch
+reference adds another ~0.7 on the noised stream in bf16. fp32 on all 64 layers is 108 GB and
+does not fit one H100.
 
-**Not measured**: the 27B itself (bf16 download is 55.6 GB; `--layers 8 --device cuda` is the
-intended run), any GPU, bf16 tolerances, fla kernels vs the reference path, training, decoding.
+Spare vocab rows (`[MASK]` needs no resize): 243 on both the 0.8B and the **27B** (248,320 rows,
+248,077 tokenizer entries — 27B measured on Modal).
+
+### Phase 2 loop smoke (Modal H100, `Qwen/Qwen3.5-0.8B`, Nemotron `SFT/chat`, 2026-09-12)
+
+200 steps, batch 4 × 512 (×2 complementary views), block 32, lr 1e-5, bf16 autocast, full
+fine-tune: masked CE **11.2 → 3.95** (mean of last 10: 4.32), 0 skipped steps, **2,576
+sequence-tokens/s**, peak **53.1 GiB**. That throughput is the *reference torch kernels + eager
+attention* baseline, not the number to extrapolate the 27B from: fla with `initial_state` for
+the fork, SDPA with the 4D mask, and activation checkpointing are the obvious levers and none
+is applied yet. batch 8 at 512 OOMed an 80 GB H100 before the loss stopped materialising the
+full `[B, L, 248k]` logits (now only masked positions are projected).
+
+**Not measured**: any 27B training step (needs FSDP), bf16 tolerance for §3a, fla in the
+candidate path, decoding quality on any trained checkpoint.
+
+## Objective, decoder, training loop (Phase 2 / 3 mechanics)
+
+- `objective.py` — complementary masking: one mask m per sequence (ratio t drawn per block), both
+  views x_t^(m) and x_t^(1−m) trained, so every response token is a target once per step; masked-
+  token-only cross-entropy; prompt and padding never noised, never scored; a step with zero
+  targets is *skipped and counted*, not averaged into a zero. `[MASK]` = the first embedding row
+  the tokenizer does not use.
+- `decode.py` — the Phase 3 **reference** decoder: block-wise, all-[MASK] start, commit every
+  position with confidence ≥ threshold (always ≥ 1), optional left-to-right sub-blocks, no cache
+  (every step re-runs the full forward — golden by construction, slow by design).
+- `train.py` — single-device full fine-tune on the state-fork forward; `--data synthetic` is the
+  loop's own test (a deterministic token rule the tiny model must learn and the decoder must then
+  reproduce), `--data nvidia/Llama-Nemotron-Post-Training-Dataset` renders rows through the chat
+  template (`input` there is a Python-literal string of messages, not JSON — measured).
+- `modal_app.py` — GPU runs on Modal (owner directive): `equivalence` (§3a on the 27B itself) and
+  `train_run` (loop smoke + seq-tokens/s). Volume `dllm-qwen38-cache`, secret `hf-token`.
+
+Local end-to-end on the tiny model (CPU, 1 thread — macOS grouped-conv1d backward oversubscribes
+at 8 threads, 13× slower): 300 steps, batch 8, L 64, block 8: masked CE **5.74 → 0.0035**; reference
+decoder on held-out prompts: **rule accuracy 0.984**, **5.33 tokens per forward** at threshold 0.9
+(block 8). That closes objective → forward → decoder mechanically; it says nothing about language.
 
 ## Not here yet
 
-Training loop (Phase 2), PyTorch reference decoder (Phase 3), llama.cpp block-diffusion decode for
-`qwen35` and the GGUF conversion (Phase 4), benchmarks (Phase 5). Python here is mechanism, not
-policy: decisions live in the ADR, and the fleet-facing surface stays in `murakumo`.
+FSDP for the 27B (Phase 2 at scale), the llama.cpp block-diffusion decoder for `qwen35` and the
+GGUF conversion (Phase 4), benchmarks (Phase 5). Python here is mechanism, not policy: decisions
+live in the ADR, and the fleet-facing surface stays in `murakumo`.
 
 License: Apache-2.0. `gdn.py` derives from HuggingFace `transformers` (Apache-2.0).
