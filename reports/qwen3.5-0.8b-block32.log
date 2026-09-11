@@ -1,0 +1,13 @@
+Loading weights:   0%|          | 0/473 [00:00<?, ?it/s]Loading weights:   0%|          | 1/473 [00:04<34:36,  4.40s/it]Loading weights: 100%|██████████| 473/473 [00:04<00:00, 106.38it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+PASS	noised-stream-vs-oracle	7.057e-05
+PASS	clean-stream-vs-oracle	4.816e-05
+PASS	xt-block-k-ignores-xt-block-k-1	0.000e+00
+PASS	xt-block-k-ignores-x0-block-k	0.000e+00
+PASS	xt-block-k-reacts-to-x0-block-k-1	4.502e+00
+DETECTED	fault:concat-causal-gdn	1.714e+01
+DETECTED	fault:mask-leak	6.133e+00
+DETECTED	fault:no-conv-prefix	3.719e+00
+CHECKS	5/5	FAULTS-DETECTED	3/3	model=Qwen/Qwen3.5-0.8B layers=24 L=128 dtype=torch.float32 701.73s
+VOCAB	embedding_rows=248320	tokenizer_len=248077	spare_rows=243

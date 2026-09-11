@@ -1,0 +1,25 @@
+[project]
+name = "dllm-qwen38"
+version = "0.0.1"
+description = "Qwen3.8-27B (Gated DeltaNet hybrid) as a Fast-dLLM v2 block-diffusion LLM: state-fork training forward, visibility equivalence test, and the road to a dLLM GGUF"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "torch>=2.4",
+  "transformers>=5.17",
+  "safetensors",
+  "huggingface_hub",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+dllm-qwen38-equivalence = "dllm_qwen38.equivalence:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

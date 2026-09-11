@@ -1,0 +1,97 @@
+{
+ "block": 32,
+ "nblocks": 4,
+ "seq_len": 128,
+ "layers": 24,
+ "layer_types": [
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention",
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention",
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention",
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention",
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention",
+  "linear_attention",
+  "linear_attention",
+  "linear_attention",
+  "full_attention"
+ ],
+ "dtype": "torch.float32",
+ "device": "cpu",
+ "seconds": 701.73,
+ "checks": [
+  {
+   "name": "noised-stream-vs-oracle",
+   "max_abs_diff": 7.05718994140625e-05,
+   "tol": 0.001,
+   "pass": true
+  },
+  {
+   "name": "clean-stream-vs-oracle",
+   "max_abs_diff": 4.8160552978515625e-05,
+   "tol": 0.001,
+   "pass": true
+  },
+  {
+   "name": "xt-block-k-ignores-xt-block-k-1",
+   "max_abs_diff": 0.0,
+   "tol": 0.001,
+   "pass": true
+  },
+  {
+   "name": "xt-block-k-ignores-x0-block-k",
+   "max_abs_diff": 0.0,
+   "tol": 0.001,
+   "pass": true
+  },
+  {
+   "name": "xt-block-k-reacts-to-x0-block-k-1",
+   "min_abs_diff": 4.502020835876465,
+   "floor": 0.1,
+   "pass": true
+  }
+ ],
+ "faults": [
+  {
+   "fault": "concat-causal-gdn",
+   "max_abs_diff": 17.137374877929688,
+   "tol": 0.001,
+   "detected": true
+  },
+  {
+   "fault": "mask-leak",
+   "max_abs_diff": 6.132763385772705,
+   "tol": 0.001,
+   "detected": true
+  },
+  {
+   "fault": "no-conv-prefix",
+   "max_abs_diff": 3.7193384170532227,
+   "tol": 0.001,
+   "detected": true
+  }
+ ],
+ "checks_passed": 5,
+ "checks_total": 5,
+ "faults_detected": 3,
+ "faults_total": 3,
+ "model": "Qwen/Qwen3.5-0.8B",
+ "vocab": {
+  "embedding_rows": 248320,
+  "tokenizer_len": 248077,
+  "spare_rows": 243
+ }
+}
