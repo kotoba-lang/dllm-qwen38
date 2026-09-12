@@ -30,13 +30,15 @@ image = (
         "huggingface_hub[hf_transfer]",
         "flash-linear-attention",
     )
-    .env({"HF_HOME": "/cache/hf", "HF_XET_HIGH_PERFORMANCE": "1", "TOKENIZERS_PARALLELISM": "false", "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"})
+    # PYTHONPATH=/root because fsdp_train.py is launched with `--module`, which needs the
+    # package dir's parent on the path (set here, on the base image: Modal rejects build
+    # steps layered after add_local_*)
+    .env({"HF_HOME": "/cache/hf", "HF_XET_HIGH_PERFORMANCE": "1", "TOKENIZERS_PARALLELISM": "false", "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True", "PYTHONPATH": "/root"})
     .add_local_dir("src/dllm_qwen38", remote_path="/root/dllm_qwen38")
 )
 
 vol = modal.Volume.from_name("dllm-qwen38-cache", create_if_missing=True)
 secrets = [modal.Secret.from_name("hf-token")]
-
 
 def _run_dir(name: str) -> str:
     d = f"/cache/runs/{name}-{time.strftime('%Y%m%d-%H%M%S')}"
@@ -157,6 +159,58 @@ def lever_bench_remote(model: str, data: str, split: str, steps: int, batch: int
         json.dump(rep, f, indent=1)
     vol.commit()
     return rep
+
+
+@app.function(image=image, gpu="H100:8", timeout=8 * 3600, volumes={"/cache": vol}, secrets=secrets)
+def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_len: int, block: int, lr: float, layers: int | None, nproc: int, grad_checkpoint: bool, mem_history: bool) -> dict:
+    """FSDP training across the container's GPUs via torchrun (fsdp_train.py --module).
+
+    batch is the GLOBAL rows per step; each rank takes batch/nproc rows and the complementary
+    views double what each rank's forward sees. The 0.8B smoke at nproc=1 must land on
+    train.py's loss trajectory (single-GPU parity); nproc=8 is the shape the 27B runs.
+    mem_history turns on fsdp_train's OOM diagnostics (MEMHIST dump + MEMCENSUS).
+    """
+    import subprocess
+
+    d = _run_dir("fsdp-train")
+    argv = [
+        "torchrun", f"--nproc_per_node={nproc}", "--master_port=29517", "--module", "dllm_qwen38.fsdp_train",
+        "--model", model, "--data", data, "--split", split, "--steps", str(steps), "--batch", str(batch),
+        "--seq-len", str(seq_len), "--block", str(block), "--lr", str(lr), "--out", d,
+    ]
+    if layers:
+        argv += ["--layers", str(layers)]
+    if grad_checkpoint:
+        argv += ["--grad-checkpoint"]
+    if mem_history:
+        argv += ["--mem-history"]
+    t0 = time.time()
+    p = subprocess.run(argv, capture_output=True, text=True)
+    # full logs to the run dir — the tail fields below are capped, and the first 27B smoke
+    # died with its real traceback entirely outside the 4000-char stderr window (torchrun's
+    # ChildFailedError chatter consumed it), leaving nothing to diagnose from
+    for name, blob in (("stdout.log", p.stdout), ("stderr.log", p.stderr)):
+        with open(f"{d}/{name}", "w") as f:
+            f.write(blob)
+    rep = json.load(open(f"{d}/report.json")) if os.path.exists(f"{d}/report.json") else {}
+    rep.update({
+        "exit": p.returncode,
+        "wall_total_s": round(time.time() - t0, 1),
+        "run_dir": d,
+        "stdout_tail": p.stdout[-6000:],
+        "stderr_tail": p.stderr[-4000:],
+        "gpu": subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"], capture_output=True, text=True).stdout.strip().replace("\n", " | "),
+    })
+    with open(f"{d}/report.json", "w") as f:
+        json.dump(rep, f, indent=1)
+    vol.commit()
+    return rep
+
+
+@app.local_entrypoint()
+def fsdp_run(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/Llama-Nemotron-Post-Training-Dataset", split: str = "chat", steps: int = 100, batch: int = 8, seq_len: int = 512, block: int = 32, lr: float = 1e-5, layers: int = 0, nproc: int = 8, grad_checkpoint: bool = False, mem_history: bool = False):
+    rep = fsdp_remote.remote(model, data, split, steps, batch, seq_len, block, lr, layers or None, nproc, grad_checkpoint, mem_history)
+    print(json.dumps(rep, indent=1))
 
 
 @app.local_entrypoint()

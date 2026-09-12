@@ -50,30 +50,45 @@ def synthetic_batches(B: int, L: int, vocab: int, block: int, seed: int):
 def chat_batches(dataset: str, split: str, tokenizer, B: int, L: int, block: int, seed: int, streaming: bool = True):
     from datasets import load_dataset
 
-    ds = load_dataset(dataset, "SFT" if "Nemotron" in dataset else None, split=split, streaming=streaming)
-    if streaming:
-        ds = ds.shuffle(seed=seed, buffer_size=2000)
     pad = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else 0
     buf_x, buf_p, buf_v = [], [], []
-    for row in ds:
-        msgs = _messages(row)
-        if msgs is None:
-            continue
-        prompt = tokenizer.apply_chat_template(msgs[:-1], tokenize=True, add_generation_prompt=True)
-        full = tokenizer.apply_chat_template(msgs, tokenize=True)
-        if hasattr(prompt, "input_ids"):
-            prompt, full = prompt["input_ids"], full["input_ids"]
-        if len(prompt) >= L or len(full) <= len(prompt):
-            continue
-        ids = full[:L]
-        valid = len(ids)
-        ids = ids + [pad] * (L - valid)
-        buf_x.append(ids)
-        buf_p.append(len(prompt))
-        buf_v.append(valid)
-        if len(buf_x) == B:
-            yield torch.tensor(buf_x), torch.tensor(buf_p), torch.tensor(buf_v)
-            buf_x, buf_p, buf_v = [], [], []
+    pass_n = 0
+    while True:  # cycle: a real run's row budget (32k steps × B rows) exceeds any single split
+        # (measured 2026-09-12: Nemotron SFT chat split is 39,792 rows — the 1% run would
+        # StopIteration at ~step 4,975). Re-load per pass: streaming iterators are exhausted
+        # after one walk. Pass 0 shuffles with the caller's seed verbatim, so ≤100-step
+        # parity runs see byte-identical row order to the pre-cycling generator.
+        ds = load_dataset(dataset, "SFT" if "Nemotron" in dataset else None, split=split, streaming=streaming)
+        if streaming:
+            ds = ds.shuffle(seed=seed + pass_n, buffer_size=2000)
+        added = 0  # usable rows this pass — the degenerate-split guard below keys on it
+        yielded = 0  # full batches this pass
+        for row in ds:
+            msgs = _messages(row)
+            if msgs is None:
+                continue
+            prompt = tokenizer.apply_chat_template(msgs[:-1], tokenize=True, add_generation_prompt=True)
+            full = tokenizer.apply_chat_template(msgs, tokenize=True)
+            if hasattr(prompt, "input_ids"):
+                prompt, full = prompt["input_ids"], full["input_ids"]
+            if len(prompt) >= L or len(full) <= len(prompt):
+                continue
+            ids = full[:L]
+            valid = len(ids)
+            ids = ids + [pad] * (L - valid)
+            buf_x.append(ids)
+            buf_p.append(len(prompt))
+            buf_v.append(valid)
+            added += 1
+            if len(buf_x) == B:
+                yield torch.tensor(buf_x), torch.tensor(buf_p), torch.tensor(buf_v)
+                buf_x, buf_p, buf_v = [], [], []
+                yielded += 1
+        # a full pass that added nothing means the split has no usable rows at all — stop
+        # instead of spinning forever re-loading it; and a pass whose usable rows exist but
+        # never fill one batch would grow the buffer unboundedly on every pass — same stop
+        if added == 0 or (yielded == 0 and pass_n >= 1):
+            raise RuntimeError(f"{dataset}/{split}: usable rows can't fill one batch (added {added}, yielded {yielded}); cycling aborted")
 
 
 def _messages(row: dict):
