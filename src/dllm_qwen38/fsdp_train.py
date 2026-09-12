@@ -9,9 +9,30 @@ the HF layer itself would all-gather only when the *layer* is called — which n
 so every submodule call would read a **local shard**: silent wrong answers, no error.
 
 The fix here is one reference `nn.Module` (`LayerStep`) holding the layer-step body exactly as
-`blockdiff.py::_layer_step` has it, wrapped as the FSDP unit with `reshard_after_forward=False`
-so the gathered weights stay resident between the two mixer calls and the two mlp calls (one
-gather per layer per step, not four). `embed_tokens`, `norm`, and `lm_head` stay replicated
+`blockdiff.py::_layer_step` has it, wrapped as the FSDP unit with `reshard_after_forward=True`
+(gather for the forward's four reads — two mixer calls + two mlp calls — reshard after;
+measured at 0.8B: +21% throughput, identical loss trajectory). Topology, read against torch
+2.14 FSDP2 source plus a world-1 probe: the 64 sibling `fully_shard` calls under a non-FSDP
+parent each lazily init as their OWN root — 64 states of one param group each, no aggregation,
+each with its own comm_ctx and a `post_forward_order` of just itself. Two consequences:
+`_backward_prefetch` sees curr_index=0 in every state and never prefetches (backward is fully
+synchronous per unit), and `reshard_after_backward` defaults True, so each unit's
+post_backward hook reshards — copy-out storages are alloc/free pairs on
+`FSDPParam.all_gather_outputs` and nothing here pins a buffer by hand. Forward is measured
+clean at 27B scale (run fsdp-train-20260912-072552: after-forward 11.79 GiB — one 0.78 GiB
+copy-out kept alive per unit would be ~62 GiB; at-OOM census 11 live / 0.55 GiB). The
+step-1-backward OOM (76.75 GiB allocated on all 8 ranks, runs -071458/-072155/-072552) is
+MEASURED (run fsdp-train-20260912-094911, `--mem-history`): `post_backward` parks one fp32
+reduce-scatter input per unit (~1.42 GiB at 27B) in `comm_ctx.reduce_scatter_states` — a
+list torch designs as ONE shared list with a global cap of 1 (`_fsdp_param_group.py`
+"a single shared list governed by one cap"), but which the sibling topology turns into 64
+private lists, so every backward-completed unit parks its input until the end-of-backward
+callback. At unit 41 of step 1's backward that is 41 parked = 58.09 GiB (census), and the
+allocation snapshot puts 63.2 GiB on the `post_backward` stack. The fix in `build_and_shard`
+shares one list object across all units, restoring the intended recycling (≤1 input in
+flight). At 0.8B neither lever changes the loss trajectory — gathering order moves WHEN
+weights are gathered, never what they are.
+`embed_tokens`, `norm`, and `lm_head` stay replicated
 (unsharded): they sit outside every FSDP unit by construction, and at 27B that is ~2.5 GB bf16
 per rank against a 52 GB sharded tower.
 
@@ -37,6 +58,7 @@ import argparse
 import json
 import math
 import os
+import signal
 import sys
 import time
 from functools import partial
@@ -103,8 +125,29 @@ class LayerStep(torch.nn.Module):
 def build_and_shard(text_model, layers: int | None = None):
     """Wrap each decoder layer in a LayerStep and FSDP2-shard each unit.
 
-    `reshard_after_forward=False`: the state fork reads the layer's weights four times per step
-    (two mixer calls + two mlp calls); resharding between them would re-all-gather per read.
+    `reshard_after_forward=True`: gather for the forward's four reads (two mixer calls + two
+    mlp calls), reshard afterward — measured at 0.8B: +21% seq-tok/s, identical trajectory.
+    Under the sibling topology (each unit its own FSDP root, one group per state) torch
+    2.14's backward is fully synchronous: no prefetch (the loop needs curr_index > 0), and
+    each unit's post_backward hook reshards (`reshard_after_backward` defaults True), so a
+    unit's copy-out storage is freed inside backward, not held to its end.
+
+    The third sibling-topology consequence is the reduce-scatter input parking, measured at
+    27B (run fsdp-train-20260912-094911): `post_backward` parks each unit's fp32
+    reduce-scatter input (~1.42 GiB) in `comm_ctx.reduce_scatter_states`, whose built-in
+    recycle (`pop(0)` + `wait_event` + del before allocating a fresh input) is governed by a
+    cap on a list torch's design comment calls "a single shared list" — under 64 private
+    comm_ctxs each recycle only ever sees its own list, all 64 inputs stay parked until the
+    end-of-backward callback, and step 1 OOMs at unit 41 (58.09 GiB parked). Sharing ONE
+    Python list object across the units' comm_ctxs restores the intended recycling: the
+    next unit's post_backward pops+waits the previous unit's input, so ≤1 is in flight
+    (same ops, same order — only WHEN the ~1.4 GiB is freed changes). The install CANNOT
+    happen here: FSDPCommContext has no __init__ — every attribute, `reduce_scatter_states`
+    included, is created inside `lazy_init()`, which runs on each unit's first forward, so
+    any attribute set before that is overwritten by a fresh empty list (measured at 27B,
+    run fsdp-train-20260912-102033: the build-time install OOMed with the identical
+    41-parked signature). The install therefore lives in `train_fsdp` right after the
+    first forward, when all units have completed lazy init and before the first backward.
     """
     cfg = text_model.config
     stack = list(text_model.layers)[: cfg.num_hidden_layers if layers is None else layers]
@@ -113,11 +156,44 @@ def build_and_shard(text_model, layers: int | None = None):
     for i, layer in enumerate(stack):
         step = LayerStep(layer, cfg.layer_types[i])
         text_model.layers[i] = step
-        fully_shard(step, reshard_after_forward=False, mp_policy=mp)
+        fully_shard(step, reshard_after_forward=True, mp_policy=mp)
         steps.append(step)
     return steps  # the LayerSteps, NOT `stack`: the raw HF layers must never be called again
     # (calling a raw layer reads its sharded DTensor params with no unshard hook — the
     # mixed-Tensor/DTensor crash of the first smoke, 2026-09-12)
+
+
+def _install_shared_rs_states(steps: list, log=print) -> None:
+    """Share ONE reduce_scatter_states list across all FSDP units — call after the first forward.
+
+    Must run POST-lazy-init (see build_and_shard's docstring for the measured why): the
+    comm_ctx object is stable from fully_shard on, but its `reduce_scatter_states`
+    attribute is (re)created inside `lazy_init()`, which fires on each unit's first
+    forward. After the first full model forward every unit has lazy-inited, and no
+    backward has parked anything yet, so installing here is in time for step 1's parks
+    and stays valid for the whole run (lazy_init never re-fires; the list is only ever
+    mutated in place — `append`/`pop(0)`/`clear` by torch's recycle and drains).
+
+    The sibling topology keeps 64 DISTINCT comm_ctx objects (each unit is its own root;
+    `_init_shared_state` sees only its own subtree, so all_states = [self] per unit) —
+    the sharing is by list-object identity, not comm_ctx identity. The probe asserts
+    exactly that: one distinct list id across every state and group, loudly, because a
+    partial share just moves the OOM to a different unit count.
+    """
+    shared: list = []
+    list_ids: list[int] = []
+    for st in steps:
+        s = st._get_fsdp_state()
+        s._comm_ctx.reduce_scatter_states = shared
+        list_ids.append(id(shared))
+        for grp in s._fsdp_param_groups:
+            grp.comm_ctx.reduce_scatter_states = shared
+            list_ids.append(id(grp.comm_ctx.reduce_scatter_states))
+    n_distinct = len(set(list_ids))
+    if n_distinct != 1:
+        print(f"RS-SHARE\tWARN\t{n_distinct} distinct list objects (expected 1) — parking not shared, OOM risk", flush=True)
+    else:
+        print(f"RS-SHARE\tok\t{len(steps)} units share one list (id {list_ids[0] % 2**32:#x})", flush=True)
 
 
 def _sync_replicated_grads(uniq) -> None:
@@ -168,6 +244,77 @@ def _clip_grads(uniq, max_norm: float) -> None:
                 p.grad.mul_(coef)  # python-float mul dispatches the Scalar overload — DTensor-safe
 
 
+def _gather_census(steps, tag: str) -> None:
+    """Live per-unit all-gather buffers — the leak-class probe at 27B scale.
+
+    `FSDPParam.alloc_all_gather_outputs` and `free_unsharded_param` are a matched pair on the
+    `all_gather_outputs` list; this counts the list members whose storage is allocated
+    (`untyped_storage().nbytes() > 0`), so a freed buffer counts zero and a leaked live
+    copy-out shows up as n_live × ~0.78 GiB at 27B (invisible at 0.8B, where the same
+    per-buffer size is ~31 MB and the whole pool is 1 GiB). The `_all_gather_result` and
+    deferred `comm_ctx.all_gather_state` counts are the group-level handles that could pin a
+    result past its own wait. `rs_inputs` counts the parked reduce-scatter input buffers in
+    the (now shared) `comm_ctx.reduce_scatter_states` — post_backward parks one per unit;
+    before the shared-list fix (run fsdp-train-20260912-094911) the private-list topology
+    left every backward-completed unit's input parked until the end-of-backward callback
+    (41 parked = 58.09 GiB at the step-1 OOM); with the fix, the next unit's post_backward
+    recycles the previous one's, so this reads ≤1 during backward and 0 between steps.
+    """
+    n_live, total, n_result, n_defer = 0, 0, 0, 0
+    n_rs, rs_total = 0, 0
+    for st in steps:
+        state = st._get_fsdp_state()
+        for grp in state._fsdp_param_groups:
+            if grp._all_gather_result is not None:
+                n_result += 1
+            if grp.comm_ctx.all_gather_state is not None:
+                n_defer += 1
+            for rs in grp.comm_ctx.reduce_scatter_states:
+                nb = rs.reduce_scatter_input.untyped_storage().nbytes()
+                if nb > 0:
+                    n_rs += 1
+                    rs_total += nb
+            for p in grp.fsdp_params:
+                for t in p.all_gather_outputs:
+                    nb = t.untyped_storage().nbytes()
+                    if nb > 0:
+                        n_live += 1
+                        total += nb
+    print(
+        f"MEMCENSUS\t{tag}\tlive_copies={n_live}\ttotal_gib={total / 2**30:.2f}\tresults={n_result}\tdeferred={n_defer}\trs_inputs={n_rs}\trs_gib={rs_total / 2**30:.2f}",
+        flush=True,
+    )
+
+
+def _dump_memhist(rank: int) -> None:
+    """Aggregate live CUDA blocks by their allocation stack and print the top consumers.
+
+    Called from the OOM handler with `torch.cuda.memory._record_memory_history` active, so
+    each allocated block in the snapshot carries its alloc stack (`blocks[i]["frames"]`).
+    One line per collapsed stack (last 3 frames): live bytes and block count.
+    """
+    try:
+        snap = torch.cuda.memory._snapshot()
+    except Exception as e:  # never mask the OOM we re-raise
+        print(f"[MEMHIST rank {rank}] snapshot failed: {e!r}", flush=True)
+        return
+    live: dict[str, list[int]] = {}
+    for seg in snap.get("segments", []):
+        for b in seg.get("blocks", []):
+            if b.get("state") != "active_allocated":  # snapshot state strings are lowercase-hyphen ("active_allocated"/"inactive"/"free" — measured 2026-09-12: "ALLOCATED" matches nothing and the dump prints 0.00 GiB)
+                continue
+            frames = b.get("frames") or []
+            key = " <- ".join(f["name"].split("/")[-1] for f in frames[-3:]) or "<no stack>"
+            ent = live.setdefault(key, [0, 0])
+            ent[0] += int(b["size"])
+            ent[1] += 1
+    top = sorted(live.items(), key=lambda kv: -kv[1][0])[:25]
+    tot = sum(v[0] for v in live.values())
+    print(f"[MEMHIST rank {rank}] live {tot / 2**30:.2f} GiB in {sum(v[1] for v in live.values())} blocks", flush=True)
+    for key, (bts, c) in top:
+        print(f"[MEMHIST rank {rank}] {bts / 2**20:9.1f} MiB n={c:5d} {key}", flush=True)
+
+
 def fsdp_forward(text_model, steps, x0_ids, xt_ids, block: int, checkpointing: bool = False):
     """Training-time forward on the sharded stack; returns final-normed hiddens of both streams.
 
@@ -203,6 +350,7 @@ def train_fsdp(
     n_steps: int,
     lr: float,
     checkpointing: bool = False,
+    mem_history: bool = False,
     grad_clip: float = 1.0,
     log_every: int = 10,
     log=print,
@@ -229,39 +377,77 @@ def train_fsdp(
     losses, seq_tokens, t0, skipped = [], 0, time.time(), 0
     torch.cuda.reset_peak_memory_stats()
     text_model.train()
+    if mem_history and rank == 0:
+        # ring buffer of alloc/free stacks, last 60k events; rank 0 only — the OOM fires
+        # identically on all ranks, and the snapshot's live view (segments + per-block alloc
+        # stacks) is what we need. Live blocks carry their frames regardless of ring
+        # truncation; 60k bounds the snapshot build so it fits inside the SIGKILL window
+        # after the SIGTERM-ignored dump starts. History stops after step 3 (the OOM is in
+        # step-1 backward, if it fires at all)
+        torch.cuda.memory._record_memory_history(max_entries=60000)
     for step in range(1, n_steps + 1):
-        x0, prompt_len, valid_len = next(batches)
-        x0, prompt_len, valid_len = x0.to(device), prompt_len.to(device), valid_len.to(device)
-        if local is None:  # fixed after the first batch: batch must divide evenly across ranks
-            assert x0.shape[0] % world == 0, f"batch {x0.shape[0]} not divisible by world {world}"
-            local = x0.shape[0] // world
-        sl = slice(rank * local, (rank + 1) * local)
-        x0_r, pl_r, vl_r = x0[sl], prompt_len[sl], valid_len[sl]
-        x0_2, xt_2, m_2 = complementary_step_inputs(x0_r, pl_r, block, mask_id, torch.Generator(device=device).manual_seed(step * 1000 + rank), vl_r)
-        ht, _ = fsdp_forward(text_model, steps, x0_2, xt_2, block, checkpointing=checkpointing)
-        n_local = int(m_2.sum())
-        if n_local:
-            logits = lm_head(ht[m_2])
-            ce_sum = torch.nn.functional.cross_entropy(logits.float(), x0_2[m_2], reduction="sum")
-        else:
-            ce_sum = ht.float().sum() * 0.0  # graph-connected zero: grads must still flow
-        n_all = torch.tensor([float(n_local)], device=device)
-        dist.all_reduce(n_all)
-        n_global = int(n_all.item())
-        if n_global == 0:
-            skipped += 1
-            continue
-        loss = ce_sum / n_global  # this rank's contribution to the global mean CE
-        opt.zero_grad(set_to_none=True)
-        loss.backward()
-        _sync_replicated_grads(uniq)  # before the clip: the clip must see the averaged plain grads
-        _clip_grads(uniq, grad_clip)
-        opt.step()
-        ce_all = ce_sum.detach().clone()
-        dist.all_reduce(ce_all)
-        losses.append(float(ce_all) / n_global)
-        # same accounting as train.py: unique sequence tokens (batch × L), not the doubled view rows
-        seq_tokens += x0_r.numel() * world
+        if mem_history and rank == 0 and step == 4:
+            torch.cuda.memory._record_memory_history(None)  # bound the recording overhead
+        try:
+            x0, prompt_len, valid_len = next(batches)
+            x0, prompt_len, valid_len = x0.to(device), prompt_len.to(device), valid_len.to(device)
+            if local is None:  # fixed after the first batch: batch must divide evenly across ranks
+                assert x0.shape[0] % world == 0, f"batch {x0.shape[0]} not divisible by world {world}"
+                local = x0.shape[0] // world
+            sl = slice(rank * local, (rank + 1) * local)
+            x0_r, pl_r, vl_r = x0[sl], prompt_len[sl], valid_len[sl]
+            x0_2, xt_2, m_2 = complementary_step_inputs(x0_r, pl_r, block, mask_id, torch.Generator(device=device).manual_seed(step * 1000 + rank), vl_r)
+            ht, _ = fsdp_forward(text_model, steps, x0_2, xt_2, block, checkpointing=checkpointing)
+            if step == 1:
+                # post-lazy-init shared RS list — see _install_shared_rs_states; every rank
+                # installs (each rank owns its own Python objects). In time for step 1's
+                # backward: the first forward completed all 64 units' lazy init.
+                _install_shared_rs_states(steps, log=print if rank == 0 else (lambda *a, **k: None))
+            if rank == 0 and step == 1:
+                print(f"MEM\tafter fwd\tallocated {torch.cuda.memory_allocated()/2**30:.2f} GiB\treserved {torch.cuda.memory_reserved()/2**30:.2f} GiB")
+            if mem_history and rank == 0 and step <= 2:
+                _gather_census(steps, f"after fwd s{step}")
+            n_local = int(m_2.sum())
+            if n_local:
+                logits = lm_head(ht[m_2])
+                ce_sum = torch.nn.functional.cross_entropy(logits.float(), x0_2[m_2], reduction="sum")
+            else:
+                ce_sum = ht.float().sum() * 0.0  # graph-connected zero: grads must still flow
+            n_all = torch.tensor([float(n_local)], device=device)
+            dist.all_reduce(n_all)
+            n_global = int(n_all.item())
+            if n_global == 0:
+                skipped += 1
+                continue
+            loss = ce_sum / n_global  # this rank's contribution to the global mean CE
+            opt.zero_grad(set_to_none=True)
+            loss.backward()
+            if rank == 0 and step == 1:
+                print(f"MEM\tafter bwd\tallocated {torch.cuda.memory_allocated()/2**30:.2f} GiB\treserved {torch.cuda.memory_reserved()/2**30:.2f} GiB")
+            if mem_history and rank == 0 and step <= 2:
+                _gather_census(steps, f"after bwd s{step}")
+            _sync_replicated_grads(uniq)  # before the clip: the clip must see the averaged plain grads
+            _clip_grads(uniq, grad_clip)
+            opt.step()
+            ce_all = ce_sum.detach().clone()
+            dist.all_reduce(ce_all)
+            losses.append(float(ce_all) / n_global)
+            # same accounting as train.py: unique sequence tokens (batch × L), not the doubled view rows
+            seq_tokens += x0_r.numel() * world
+        except torch.OutOfMemoryError:
+            if mem_history and rank == 0:
+                # torchrun tears the pool down ~85ms after the FIRST rank to exit (measured on
+                # run fsdp-train-20260912-093247: all 8 OOM together, the first exitcode-1 fired
+                # the SIGTERMs and rank 0's snapshot build was killed silently mid-build). So the
+                # fast census goes first — it is a plain attribute walk and prints in
+                # microseconds — and only the slow stack snapshot runs under SIG_IGN (the agent
+                # SIGKILLs ~30s later, the build needs seconds).
+                print(f"MEM\tat OOM\tallocated {torch.cuda.memory_allocated()/2**30:.2f} GiB\treserved {torch.cuda.memory_reserved()/2**30:.2f} GiB", flush=True)
+                _gather_census(steps, "at OOM")
+                signal.signal(signal.SIGTERM, signal.SIG_IGN)
+                print("[MEMHIST rank 0] OOM caught; snapshotting alloc stacks (SIGTERM ignored)", flush=True)
+                _dump_memhist(rank)
+            raise
         if rank == 0 and (step % log_every == 0 or step == n_steps):
             el = time.time() - t0
             log(f"step {step}\tloss {losses[-1]:.4f}\ttargets {n_global}\tseq-tok/s {seq_tokens / el:.0f}\telapsed {el:.0f}s")
@@ -327,6 +513,7 @@ def main(argv=None) -> int:
     p.add_argument("--lr", type=float, default=1e-5)
     p.add_argument("--layers", type=int, default=None)
     p.add_argument("--grad-checkpoint", action="store_true")
+    p.add_argument("--mem-history", action="store_true", help="record alloc stacks (MEMHIST dump at OOM) + MEMCENSUS per-unit gather census")
     p.add_argument("--gdn", default="torch", choices=["auto", "torch", "fla"])
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", default=None, help="directory for report.json (rank 0)")
@@ -350,12 +537,14 @@ def main(argv=None) -> int:
     mask_id = mask_token_id(text_model, tok)
     steps = build_and_shard(text_model, a.layers)
     if rank == 0:
+        print(f"MEM\tafter shard\tallocated {torch.cuda.memory_allocated()/2**30:.2f} GiB\treserved {torch.cuda.memory_reserved()/2**30:.2f} GiB")
+    if rank == 0:
         n_sharded = sum(p.numel() for s in steps for p in s.parameters())
-        print(f"FSDP\tworld {dist.get_world_size()}\tsharded params {n_sharded/1e9:.2f}B\teplicated (embed+head+norm) {(sum(p.numel() for p in text_model.parameters()) - n_sharded)/1e9:.2f}B")
+        print(f"FSDP\tworld {dist.get_world_size()}\tsharded params {n_sharded/1e9:.2f}B\treplicated (embed+head+norm) {(sum(p.numel() for p in text_model.parameters()) - n_sharded)/1e9:.2f}B")
 
     batches = chat_batches(a.data, a.split, tok, a.batch, a.seq_len, a.block, a.seed)
     rep = train_fsdp(
-        text_model, lm_head, steps, batches, block=a.block, mask_id=mask_id, n_steps=a.steps, lr=a.lr, checkpointing=a.grad_checkpoint
+        text_model, lm_head, steps, batches, block=a.block, mask_id=mask_id, n_steps=a.steps, lr=a.lr, checkpointing=a.grad_checkpoint, mem_history=a.mem_history
     )
     rep.update({"model": a.model, "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "layers": a.layers})
     if rank == 0:

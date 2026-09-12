@@ -162,12 +162,13 @@ def lever_bench_remote(model: str, data: str, split: str, steps: int, batch: int
 
 
 @app.function(image=image, gpu="H100:8", timeout=8 * 3600, volumes={"/cache": vol}, secrets=secrets)
-def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_len: int, block: int, lr: float, layers: int | None, nproc: int, grad_checkpoint: bool) -> dict:
+def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_len: int, block: int, lr: float, layers: int | None, nproc: int, grad_checkpoint: bool, mem_history: bool) -> dict:
     """FSDP training across the container's GPUs via torchrun (fsdp_train.py --module).
 
     batch is the GLOBAL rows per step; each rank takes batch/nproc rows and the complementary
     views double what each rank's forward sees. The 0.8B smoke at nproc=1 must land on
     train.py's loss trajectory (single-GPU parity); nproc=8 is the shape the 27B runs.
+    mem_history turns on fsdp_train's OOM diagnostics (MEMHIST dump + MEMCENSUS).
     """
     import subprocess
 
@@ -181,8 +182,16 @@ def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_l
         argv += ["--layers", str(layers)]
     if grad_checkpoint:
         argv += ["--grad-checkpoint"]
+    if mem_history:
+        argv += ["--mem-history"]
     t0 = time.time()
     p = subprocess.run(argv, capture_output=True, text=True)
+    # full logs to the run dir — the tail fields below are capped, and the first 27B smoke
+    # died with its real traceback entirely outside the 4000-char stderr window (torchrun's
+    # ChildFailedError chatter consumed it), leaving nothing to diagnose from
+    for name, blob in (("stdout.log", p.stdout), ("stderr.log", p.stderr)):
+        with open(f"{d}/{name}", "w") as f:
+            f.write(blob)
     rep = json.load(open(f"{d}/report.json")) if os.path.exists(f"{d}/report.json") else {}
     rep.update({
         "exit": p.returncode,
@@ -199,8 +208,8 @@ def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_l
 
 
 @app.local_entrypoint()
-def fsdp_run(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/Llama-Nemotron-Post-Training-Dataset", split: str = "chat", steps: int = 100, batch: int = 8, seq_len: int = 512, block: int = 32, lr: float = 1e-5, layers: int = 0, nproc: int = 8, grad_checkpoint: bool = False):
-    rep = fsdp_remote.remote(model, data, split, steps, batch, seq_len, block, lr, layers or None, nproc, grad_checkpoint)
+def fsdp_run(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/Llama-Nemotron-Post-Training-Dataset", split: str = "chat", steps: int = 100, batch: int = 8, seq_len: int = 512, block: int = 32, lr: float = 1e-5, layers: int = 0, nproc: int = 8, grad_checkpoint: bool = False, mem_history: bool = False):
+    rep = fsdp_remote.remote(model, data, split, steps, batch, seq_len, block, lr, layers or None, nproc, grad_checkpoint, mem_history)
     print(json.dumps(rep, indent=1))
 
 
