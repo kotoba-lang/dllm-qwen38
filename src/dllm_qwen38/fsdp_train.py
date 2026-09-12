@@ -22,6 +22,12 @@ global count is zero all ranks skip the step together. At world_size 1 this redu
 `train.py`'s step — that parity (0.8B, same seed, same data) is the correctness gate before
 the 27B is trusted with this path.
 
+Two world>1 correctness fixes live here that a world-1 run cannot see and a world-8 run must:
+the replicated params (embed_tokens / norm / tied lm_head) sit outside every FSDP unit, so
+their grads are DDP-averaged by hand before the step; and the global-norm clip is computed
+here rather than via `torch.nn.utils.clip_grad_norm_`, which dies on the mixed DTensor/plain
+grad list (both fixes measured on the H200 smokes 2026-09-12).
+
 Run (Modal, gpu="H100:8"): torchrun --nproc_per_node=8 --module dllm_qwen38.fsdp_train ...
 """
 
@@ -38,6 +44,7 @@ from functools import partial
 import torch
 import torch.distributed as dist
 from torch.distributed.fsdp import MixedPrecisionPolicy, fully_shard
+from torch.distributed.tensor import DTensor
 from torch.utils.checkpoint import checkpoint as _grad_checkpoint
 
 from .blockdiff import FULL, LINEAR, _rotary, complementary_mask
@@ -102,11 +109,63 @@ def build_and_shard(text_model, layers: int | None = None):
     cfg = text_model.config
     stack = list(text_model.layers)[: cfg.num_hidden_layers if layers is None else layers]
     mp = MixedPrecisionPolicy(param_dtype=None, reduce_dtype=torch.float32)
+    steps = []
     for i, layer in enumerate(stack):
         step = LayerStep(layer, cfg.layer_types[i])
         text_model.layers[i] = step
         fully_shard(step, reshard_after_forward=False, mp_policy=mp)
-    return stack
+        steps.append(step)
+    return steps  # the LayerSteps, NOT `stack`: the raw HF layers must never be called again
+    # (calling a raw layer reads its sharded DTensor params with no unshard hook — the
+    # mixed-Tensor/DTensor crash of the first smoke, 2026-09-12)
+
+
+def _sync_replicated_grads(uniq) -> None:
+    """DDP-average the grads of params outside every FSDP unit.
+
+    FSDP2 reduce-scatters its units' grads (average), but embed_tokens / norm / the tied
+    lm_head sit outside all units, so each rank backward's only its own rows: without this the
+    optimizer steps would diverge across ranks — a silent wrong answer world-1 parity cannot
+    see. "Plain" here means exactly the params whose grad is not a DTensor.
+    """
+    world = dist.get_world_size()
+    for p in uniq:
+        g = p.grad
+        if g is None or isinstance(g, DTensor):
+            continue
+        dist.all_reduce(g)
+        g.div_(world)
+
+
+def _clip_grads(uniq, max_norm: float) -> None:
+    """One global 2-norm clip across FSDP units (DTensor grads) and replicated params (plain grads).
+
+    `torch.nn.utils.clip_grad_norm_` cannot take the mixed list — replicated params' grads are
+    plain tensors while FSDP units' are DTensors, so its total_norm mixes the two and
+    `g.mul_(clip_coef)` dies with `aten.mul_.Tensor got mixed torch.Tensor and DTensor` (H200
+    smoke 2026-09-12). Same math as train.py's clip_grad_norm_: fp32 per-grad norms, coef =
+    max_norm / (total + 1e-6) clamped at 1. The sharded grads' local sq-norms are summed over
+    the world (each rank holds one shard); the plain grads were world-averaged by
+    `_sync_replicated_grads` before this runs and are identical on every rank, so their sq-norm
+    must be counted once — that is why the plain bucket is divided by world here (the all-reduce
+    would otherwise count it once per rank).
+    """
+    pair = torch.zeros(2, dtype=torch.float32, device="cuda")
+    for p in uniq:
+        g = p.grad
+        if g is None:
+            continue
+        if isinstance(g, DTensor):
+            pair[0] += g.to_local().float().norm() ** 2
+        else:
+            pair[1] += g.float().norm() ** 2
+    dist.all_reduce(pair)  # SUM: [0] = sharded sq-norm across the world, [1] = world × plain sq-norm
+    total = math.sqrt(pair[0].item() + pair[1].item() / dist.get_world_size())
+    coef = min(1.0, max_norm / (total + 1e-6))
+    if coef < 1.0:  # == 1.0 (incl. the all-zero-grad path) is an exact no-op, skip the mul
+        for p in uniq:
+            if p.grad is not None:
+                p.grad.mul_(coef)  # python-float mul dispatches the Scalar overload — DTensor-safe
 
 
 def fsdp_forward(text_model, steps, x0_ids, xt_ids, block: int, checkpointing: bool = False):
@@ -160,7 +219,10 @@ def train_fsdp(
             uniq.append(p)
     for p in uniq:
         p.requires_grad_(True)
-    opt = torch.optim.AdamW(uniq, lr=lr, betas=(0.9, 0.95), weight_decay=0.0)
+    # foreach=False: the mixed param list (FSDP units are DTensors, embed/norm/lm_head are
+    # plain) would be grouped into one multi-tensor op by foreach AdamW and die with the same
+    # mixed-Tensor/DTensor error as clip_grad_norm_ did; the single-tensor path never mixes
+    opt = torch.optim.AdamW(uniq, lr=lr, betas=(0.9, 0.95), weight_decay=0.0, foreach=False)
 
     local = None
     losses, seq_tokens, t0, skipped = [], 0, time.time(), 0
@@ -191,7 +253,8 @@ def train_fsdp(
         loss = ce_sum / n_global  # this rank's contribution to the global mean CE
         opt.zero_grad(set_to_none=True)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(uniq, grad_clip, foreach=False)
+        _sync_replicated_grads(uniq)  # before the clip: the clip must see the averaged plain grads
+        _clip_grads(uniq, grad_clip)
         opt.step()
         ce_all = ce_sum.detach().clone()
         dist.all_reduce(ce_all)

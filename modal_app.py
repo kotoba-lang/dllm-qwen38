@@ -30,16 +30,15 @@ image = (
         "huggingface_hub[hf_transfer]",
         "flash-linear-attention",
     )
-    .env({"HF_HOME": "/cache/hf", "HF_XET_HIGH_PERFORMANCE": "1", "TOKENIZERS_PARALLELISM": "false", "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"})
+    # PYTHONPATH=/root because fsdp_train.py is launched with `--module`, which needs the
+    # package dir's parent on the path (set here, on the base image: Modal rejects build
+    # steps layered after add_local_*)
+    .env({"HF_HOME": "/cache/hf", "HF_XET_HIGH_PERFORMANCE": "1", "TOKENIZERS_PARALLELISM": "false", "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True", "PYTHONPATH": "/root"})
     .add_local_dir("src/dllm_qwen38", remote_path="/root/dllm_qwen38")
 )
 
 vol = modal.Volume.from_name("dllm-qwen38-cache", create_if_missing=True)
 secrets = [modal.Secret.from_name("hf-token")]
-
-# fsdp_train.py is launched with `--module`, which needs the package dir's parent on PYTHONPATH
-image_fsdp = image.env({"PYTHONPATH": "/root"})
-
 
 def _run_dir(name: str) -> str:
     d = f"/cache/runs/{name}-{time.strftime('%Y%m%d-%H%M%S')}"
@@ -162,7 +161,7 @@ def lever_bench_remote(model: str, data: str, split: str, steps: int, batch: int
     return rep
 
 
-@app.function(image=image_fsdp, gpu="H100:8", timeout=8 * 3600, volumes={"/cache": vol}, secrets=secrets)
+@app.function(image=image, gpu="H100:8", timeout=8 * 3600, volumes={"/cache": vol}, secrets=secrets)
 def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_len: int, block: int, lr: float, layers: int | None, nproc: int, grad_checkpoint: bool) -> dict:
     """FSDP training across the container's GPUs via torchrun (fsdp_train.py --module).
 
