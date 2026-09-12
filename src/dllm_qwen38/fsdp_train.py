@@ -212,11 +212,12 @@ def train_fsdp(
     rank, world = dist.get_rank(), dist.get_world_size()
     device = torch.device("cuda", torch.cuda.current_device())
     # dedup by id exactly as train.py does — tied lm_head/embed_tokens must be stepped once
-    seen, uniq = set(), []
-    for p in list(text_model.parameters()) + list(lm_head.parameters()):
+    seen, uniq, uniq_names = set(), [], []
+    for n, p in list(text_model.named_parameters()) + list(lm_head.named_parameters()):
         if id(p) not in seen:
             seen.add(id(p))
             uniq.append(p)
+            uniq_names.append(n)
     for p in uniq:
         p.requires_grad_(True)
     # foreach=False: the mixed param list (FSDP units are DTensors, embed/norm/lm_head are
@@ -265,6 +266,32 @@ def train_fsdp(
             el = time.time() - t0
             log(f"step {step}\tloss {losses[-1]:.4f}\ttargets {n_global}\tseq-tok/s {seq_tokens / el:.0f}\telapsed {el:.0f}s")
     el = time.time() - t0
+    # weight-divergence probe over the replicated params only — the machinery this file adds
+    # by hand. Sharded params are skipped on purpose: rank r holds only shard r, so per-rank
+    # checksums differ by design and comparing them false-positives on a perfectly-synced run
+    # (first probe measured exactly that: spread 1032 with a clean trajectory, 2026-09-12);
+    # their consistency is FSDP2's reduce-scatter contract, not this file's. Equal fp64
+    # checksums across ranks on a plain param mean bitwise-equal weights: same tensor, summed
+    # in the same order. A trajectory match cannot substitute — ranks mask different rows, so
+    # losses legitimately differ while weights silently drift apart.
+    names, cks = [], []
+    for n, p in zip(uniq_names, uniq):
+        if isinstance(p, DTensor):
+            continue
+        names.append(n)
+        cks.append(p.detach().sum(dtype=torch.float64))
+    if cks:
+        sp = torch.stack(cks)
+        lo, hi = sp.clone(), sp
+        dist.all_reduce(lo, op=dist.ReduceOp.MIN)
+        dist.all_reduce(hi, op=dist.ReduceOp.MAX)
+        sp = hi - lo
+        spread = float(sp.max().item())
+        bad = [(names[i], float(sp[i].item())) for i in (sp > 0).nonzero().flatten().tolist()]
+    else:
+        spread, bad = 0.0, []
+    if bad:
+        print(f"WEIGHT-SPREAD\tdivergent {len(bad)}/{len(names)}\t{bad[:8]}")
     peak = torch.tensor([torch.cuda.max_memory_allocated()], device=device)
     dist.all_reduce(peak, op=dist.ReduceOp.MAX)
     g_last, g_reason = last_impl()
@@ -282,6 +309,8 @@ def train_fsdp(
         "checkpointing": checkpointing,
         "gdn_impl": g_last,
         "gdn_reason": g_reason,
+        "weight_spread": spread,
+        "divergent_params": bad[:8],
     }
     return rep
 
@@ -331,12 +360,12 @@ def main(argv=None) -> int:
     rep.update({"model": a.model, "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "layers": a.layers})
     if rank == 0:
         line = json.dumps({k: v for k, v in rep.items() if k not in ("losses",)}, default=str)
-        print(f"TRAIN\tsteps {rep['steps']}\tskipped {rep['skipped_steps']}\tloss {rep['loss_first']} -> {rep['loss_last']}\tseq-tok/s {rep['seq_tokens_per_s']:.0f}\tpeak_mem_gib {rep['peak_mem_gib']}\t{rep['seconds']:.0f}s")
+        print(f"TRAIN\tsteps {rep['steps']}\tskipped {rep['skipped_steps']}\tloss {rep['loss_first']} -> {rep['loss_last']}\tseq-tok/s {rep['seq_tokens_per_s']:.0f}\tpeak_mem_gib {rep['peak_mem_gib']}\tweight_spread {rep['weight_spread']:.3g}\t{rep['seconds']:.0f}s")
         if a.out:
             os.makedirs(a.out, exist_ok=True)
             with open(os.path.join(a.out, "report.json"), "w") as f:
                 json.dump(rep, f, indent=1, default=str)
-        ok = rep["loss_last"] is not None and math.isfinite(rep["loss_last"])
+        ok = rep["loss_last"] is not None and math.isfinite(rep["loss_last"]) and rep["weight_spread"] == 0.0
         print("REPORT\t" + line)
         dist.destroy_process_group()
         return 0 if ok else 1
