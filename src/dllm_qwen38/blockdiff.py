@@ -25,8 +25,10 @@ two is evidence about the fork, not a tautology.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 
 import torch
+from torch.utils.checkpoint import checkpoint as _grad_checkpoint
 
 from .gdn import gdn_mixer_forward
 
@@ -101,11 +103,27 @@ def block_diffusion_forward(
     fault: BreakMode | None = None,
     layers: int | None = None,
     output: str = "logits",
+    checkpointing: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Training-time forward. Returns (logits_t [B, L, V], logits_0 [B, L, V]) — or, with
     output="hidden", the final-normed hidden states [B, L, D] of both streams so the caller can
     project only the positions it scores (a full [B, L, 248k] logits tensor is what OOMed an
     80 GB H100 at batch 8 × 512 on the 0.8B, measured 2026-09-12).
+
+    checkpointing=True wraps each layer in torch.utils.checkpoint (use_reentrant=False) so the
+    mixer/attn activations are recomputed in backward instead of held for every layer at once.
+    The checkpointed function must bind its layer at call time (functools.partial) and must
+    never close over the loop variables: checkpoint recomputes at *backward* time, after the
+    layer loop has advanced, so a lambda closing over `layer`/`kind` re-ran the *last* layer
+    for every checkpoint — the forward stayed exactly right (torch.equal passed) while grads
+    reached only the last checkpointed layer plus embed and norm, 13/108 parameters, ~3× wrong
+    on embed_tokens, ~15× wrong on the last mlp, and 50 training steps left the loss on the
+    starting value (measured 2026-09-12). That same bug — recomputation running different ops
+    than forward — was also the non-reentrant ledger mismatch (219 vs 74 saved tensors on CPU
+    with the torch core, 265 vs 77 on the H100 with the fla kernel); it was never about fla.
+    Non-reentrant is chosen over reentrant on purpose: its ledger check throws loudly on this
+    class of silent forward/backward divergence, where reentrant returned wrong gradients with
+    no error at all. No-grad callers (the equivalence test) are unaffected either way.
 
     x0_ids / xt_ids: [B, L] with L a multiple of `block`. `layers` truncates the stack (the 27B
     first-N-layers run of ADR-2609112640 §3a).
@@ -127,20 +145,23 @@ def block_diffusion_forward(
     attn_mask = complementary_mask(L, block, dtype, device, leak_xt_prefix=fault.leak_xt_prefix)
 
     stack = text_model.layers[: cfg.num_hidden_layers if layers is None else layers]
-    for i, layer in enumerate(stack):
-        kind = cfg.layer_types[i]
+
+    def _layer_step(layer, kind, h0, ht):
+        """One full transformer layer for both streams; the checkpointing unit."""
         r0, rt = h0, ht
         n0, nt = layer.input_layernorm(h0), layer.input_layernorm(ht)
         if kind == LINEAR:
             m = layer.linear_attn
             if fault.concat_causal_gdn:
-                out, _, _ = gdn_mixer_forward(m, torch.cat([nt, n0], 1), chunk_size=block)
+                out, _, _ = gdn_mixer_forward(m, torch.cat([nt, n0], 1), chunk_size=block, need_states=False)
                 ot, o0 = out[:, :L], out[:, L:]
             else:
                 # pass 1: clean stream, block-causal by construction; keep S_k and the conv tail
-                o0, states0, raw0 = gdn_mixer_forward(m, n0, chunk_size=block)
+                o0, states0, raw0 = gdn_mixer_forward(m, n0, chunk_size=block, need_states=True)
                 # pass 2: every (sequence, block) pair is a batch row starting from the state of
-                # the clean prefix before it: rows ordered (b, k) → b*nb + k
+                # the clean prefix before it: rows ordered (b, k) → b*nb + k. The states are not
+                # kept (need_states=False — nothing downstream uses them), which under fla's
+                # Triton kernel turns nb sequential calls into one batched call.
                 init = torch.cat([torch.zeros_like(states0[:, :1]), states0[:, :-1]], 1)  # [B, nb, H, K, V]
                 init = init.reshape(B * nb, *init.shape[2:])
                 kmin1 = m.conv_kernel_size - 1
@@ -151,7 +172,7 @@ def block_diffusion_forward(
                     # [B, C, nb, kmin1] → [B*nb, C, kmin1]
                     prefix = padded.unfold(2, kmin1, block)[:, :, :nb].permute(0, 2, 1, 3).reshape(B * nb, -1, kmin1)
                 ot, _, _ = gdn_mixer_forward(
-                    m, nt.reshape(B * nb, block, -1), chunk_size=block, conv_prefix=prefix, initial_state=init
+                    m, nt.reshape(B * nb, block, -1), chunk_size=block, conv_prefix=prefix, initial_state=init, need_states=False
                 )
                 ot = ot.reshape(B, L, -1)
         elif kind == FULL:
@@ -164,6 +185,17 @@ def block_diffusion_forward(
         h0, ht = r0 + o0, rt + ot
         h0 = h0 + layer.mlp(layer.post_attention_layernorm(h0))
         ht = ht + layer.mlp(layer.post_attention_layernorm(ht))
+        return h0, ht
+
+    for i, layer in enumerate(stack):
+        kind = cfg.layer_types[i]
+        if checkpointing and torch.is_grad_enabled():
+            # partial, never a closure over the loop variables: recompute runs at backward time,
+            # after this loop has advanced, and a late-binding lambda would re-run the LAST layer
+            # for every checkpoint (the severed-gradient failure, measured 2026-09-12)
+            h0, ht = _grad_checkpoint(partial(_layer_step, layer, kind), h0, ht, use_reentrant=False)
+        else:
+            h0, ht = _layer_step(layer, kind, h0, ht)
 
     ht, h0 = text_model.norm(ht), text_model.norm(h0)
     if output == "hidden":

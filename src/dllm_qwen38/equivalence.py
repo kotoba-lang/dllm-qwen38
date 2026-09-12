@@ -36,7 +36,7 @@ def oracle_gdn_kernel() -> str:
     return "fla" if fla is not None else "torch-reference"
 
 
-def load_checkpoint(model_id: str, dtype: torch.dtype, device: str, layers: int | None = None):
+def load_checkpoint(model_id: str, dtype: torch.dtype, device: str, layers: int | None = None, attn_implementation: str = "eager"):
     """Text tower + lm_head of a Qwen3.5/3.8 checkpoint (vision tower is loaded but unused).
 
     `layers` truncates the stack *before* the dtype cast: the 27B is loaded in bf16 (55 GB), the
@@ -48,7 +48,7 @@ def load_checkpoint(model_id: str, dtype: torch.dtype, device: str, layers: int 
 
     cfg = AutoConfig.from_pretrained(model_id)
     load_dtype = torch.bfloat16 if (layers and dtype == torch.float32) else dtype
-    kw = dict(dtype=load_dtype, attn_implementation="eager", device_map=device)
+    kw = dict(dtype=load_dtype, attn_implementation=attn_implementation, device_map=device)
     if getattr(cfg, "text_config", None) is not None:
         m = AutoModelForImageTextToText.from_pretrained(model_id, **kw).eval()
         text_model, lm_head = m.model.language_model, m.lm_head
@@ -169,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--tol", type=float, default=None, help="max |Δlogit| accepted (default: fp32 1e-3, bf16 0.25)")
     p.add_argument("--change-floor", type=float, default=None, help="min |Δlogit| a real dependency must produce (default 10×tol)")
     p.add_argument("--dtype", default="float32", choices=["float32", "bfloat16"])
+    p.add_argument("--attn", default="eager", choices=["eager", "sdpa"], help="attention backend, applied to the oracle and the candidate alike (default eager)")
     p.add_argument("--device", default="cpu")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--json", default=None, help="write the report here as JSON")
@@ -180,7 +181,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if a.model:
-            text_model, lm_head, spare = load_checkpoint(a.model, dtype, a.device, a.layers)
+            text_model, lm_head, spare = load_checkpoint(a.model, dtype, a.device, a.layers, a.attn)
             a.layers = None  # already truncated at load
         else:
             text_model, lm_head = tiny_text_model(seed=a.seed)
@@ -198,6 +199,7 @@ def main(argv: list[str] | None = None) -> int:
 
     rep = run(text_model, lm_head, block=a.block, nblocks=a.nblocks, layers=a.layers, tol=tol, change_floor=floor, seed=a.seed, device=a.device)
     rep["model"] = a.model or "tiny-random"
+    rep["attn"] = a.attn
     rep["oracle_gdn_kernel"] = oracle_gdn_kernel()
     if spare:
         rep["vocab"] = spare

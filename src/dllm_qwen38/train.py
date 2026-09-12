@@ -25,6 +25,7 @@ import torch
 
 from .blockdiff import block_diffusion_forward, tiny_text_model
 from .decode import generate
+from .gdn import last_impl
 from .objective import complementary_step_inputs, mask_token_id, masked_ce_from_hidden
 
 # ---------------------------------------------------------------- data
@@ -112,6 +113,7 @@ def train(
     seed: int = 0,
     grad_clip: float = 1.0,
     autocast: bool = True,
+    checkpointing: bool = False,
     log=print,
 ) -> dict:
     # tied lm_head/embed_tokens (Qwen3.5-0.8B) would otherwise appear twice and be stepped twice
@@ -126,13 +128,15 @@ def train(
     gen = torch.Generator(device=device).manual_seed(seed)
     use_ac = autocast and device.startswith("cuda")
     losses, seq_tokens, t0, skipped = [], 0, time.time(), 0
+    if device.startswith("cuda"):
+        torch.cuda.reset_peak_memory_stats()  # the peak this number reports is the loop's, not the loader's
     text_model.train()
     for step in range(1, steps + 1):
         x0, prompt_len, valid_len = next(batches)
         x0, prompt_len, valid_len = x0.to(device), prompt_len.to(device), valid_len.to(device)
         x0_2, xt_2, m_2 = complementary_step_inputs(x0, prompt_len, block, mask_id, gen, valid_len)
         with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_ac):
-            ht, _ = block_diffusion_forward(text_model, lm_head, x0_2, xt_2, block, output="hidden")
+            ht, _ = block_diffusion_forward(text_model, lm_head, x0_2, xt_2, block, output="hidden", checkpointing=checkpointing)
             loss, n = masked_ce_from_hidden(ht, lm_head, x0_2, m_2)
         if n == 0:
             skipped += 1
@@ -148,7 +152,7 @@ def train(
             log(f"step {step}\tloss {float(loss):.4f}\ttargets {n}\tseq-tok/s {seq_tokens / el:.0f}\telapsed {el:.0f}s")
     text_model.eval()
     el = time.time() - t0
-    return {
+    rep = {
         "steps": steps,
         "skipped_steps": skipped,
         "loss_first": losses[0] if losses else None,
@@ -160,6 +164,10 @@ def train(
         "peak_mem_gib": round(torch.cuda.max_memory_allocated() / 2**30, 2) if device.startswith("cuda") else None,
         "losses": losses,
     }
+    # name the paths the loop actually ran (gdn.py sets these at call time; see gdn.set_impl)
+    g_last, g_reason = last_impl()
+    rep.update({"checkpointing": checkpointing, "gdn_impl": g_last, "gdn_reason": g_reason})
+    return rep
 
 
 def synthetic_eval(text_model, lm_head, *, block: int, mask_id: int, vocab: int, seed: int, threshold: float, n_prompts: int = 8, n_blocks: int = 2):
@@ -194,6 +202,9 @@ def main(argv=None) -> int:
     p.add_argument("--lr", type=float, default=1e-5)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--dtype", default="bfloat16", choices=["float32", "bfloat16"])
+    p.add_argument("--attn", default=None, help="attention backend of the loaded checkpoint (default: sdpa on cuda, eager on cpu)")
+    p.add_argument("--gdn", default="auto", choices=["auto", "torch", "fla"], help="GDN core impl for the candidate path (auto = fla when importable and on CUDA)")
+    p.add_argument("--grad-checkpoint", action="store_true", help="wrap each layer in torch.utils.checkpoint")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--threshold", type=float, default=0.9)
     p.add_argument("--out", default=None, help="directory for checkpoint + report.json")
@@ -212,16 +223,22 @@ def main(argv=None) -> int:
         from transformers import AutoTokenizer
 
         dtype = torch.float32 if a.dtype == "float32" else torch.bfloat16
-        text_model, lm_head, _ = load_checkpoint(a.model, dtype, a.device)
+        attn = a.attn or ("sdpa" if a.device.startswith("cuda") else "eager")
+        text_model, lm_head, _ = load_checkpoint(a.model, dtype, a.device, attn_implementation=attn)
         tok = AutoTokenizer.from_pretrained(a.model)
         mask_id = mask_token_id(text_model, tok)
         vocab = text_model.embed_tokens.weight.shape[0]
         text_model.gradient_checkpointing = False
     else:
+        attn = "eager"  # tiny_text_model hardcodes eager; the flag records what ran, not what was asked
         text_model, lm_head = tiny_text_model(seed=a.seed, layers=8, vocab=256)
         text_model, lm_head = text_model.to(a.device), lm_head.to(a.device)
         tok, vocab = None, 256
         mask_id = vocab - 1
+
+    from . import gdn as _gdn
+
+    _gdn.set_impl(a.gdn if a.gdn != "auto" else None)
 
     if a.data == "synthetic":
         batches = synthetic_batches(a.batch, a.seq_len, vocab if tok is None else vocab - 2, a.block, a.seed)
@@ -231,8 +248,8 @@ def main(argv=None) -> int:
             return 2
         batches = chat_batches(a.data, a.split, tok, a.batch, a.seq_len, a.block, a.seed)
 
-    rep = train(text_model, lm_head, batches, block=a.block, mask_id=mask_id, steps=a.steps, lr=a.lr, device=a.device, seed=a.seed)
-    rep.update({"model": a.model or "tiny-random", "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "device": a.device, "dtype": a.dtype if a.model else "float32"})
+    rep = train(text_model, lm_head, batches, block=a.block, mask_id=mask_id, steps=a.steps, lr=a.lr, device=a.device, seed=a.seed, checkpointing=a.grad_checkpoint)
+    rep.update({"model": a.model or "tiny-random", "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "device": a.device, "dtype": a.dtype if a.model else "float32", "attn": attn})
     if a.data == "synthetic" and not a.no_eval:
         rep["eval"] = synthetic_eval(text_model, lm_head, block=a.block, mask_id=mask_id, vocab=vocab if tok is None else vocab - 2, seed=a.seed, threshold=a.threshold)
     if a.out:

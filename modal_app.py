@@ -88,6 +88,77 @@ def train_remote(model: str, data: str, split: str, steps: int, batch: int, seq_
     return rep
 
 
+@app.function(image=image, gpu="H100", timeout=4 * 3600, volumes={"/cache": vol}, secrets=secrets)
+def lever_bench_remote(model: str, data: str, split: str, steps: int, batch: int, seq_len: int, block: int, lr: float) -> dict:
+    """Throughput levers, each measured as its own leg on fresh-loaded weights.
+
+    First the kernel-diff probe (fla Triton vs torch reference on real weights, bf16, with
+    per-block states — the ADR's open fla-vs-reference item), printed immediately so a later
+    crash cannot lose it. Then one lever at a time, 50-step training legs on fresh-loaded
+    weights each: baseline (eager attn + reference GDN core) → +sdpa (attention lever) → +fla
+    core (GDN core lever, the one that measured 4× down on the first run) → +per-layer
+    gradient checkpointing → +double batch under the freed memory → checkpointing also on the
+    fla core. (The checkpoint legs were first measured 2026-09-12 as non-training: the
+    checkpointed function closed over the layer loop variable, so recompute re-ran the last
+    layer for every checkpoint — grads only on 13/108 params, loss flat. partial() fixes it;
+    non-reentrant mode re-measures them.) Each leg reloads the model so leg N does not
+    inherit leg N−1's allocator state.
+    """
+    import subprocess
+
+    import torch
+    from transformers import AutoTokenizer
+
+    from dllm_qwen38 import gdn, train as tr
+    from dllm_qwen38.equivalence import load_checkpoint
+    from dllm_qwen38.objective import mask_token_id
+
+    dtype = torch.bfloat16
+    rep = {"model": model, "data": data, "split": split, "steps_per_leg": steps, "seq_len": seq_len, "block": block, "lr": lr}
+
+    text_model, lm_head, _ = load_checkpoint(model, dtype, "cuda", attn_implementation="sdpa")
+    tok = AutoTokenizer.from_pretrained(model)
+    mask_id = mask_token_id(text_model, tok)
+
+    i_lin = next(i for i, t in enumerate(text_model.config.layer_types) if t == "linear_attention")
+    rep["kernel_diff"] = gdn.kernel_diff(text_model.layers[i_lin].linear_attn, T=block, B=2, device="cuda")
+    print(f"KERNEL_DIFF\t{json.dumps(rep['kernel_diff'])}")  # printed now, not only in the final json — a later leg crash must not lose it
+    torch.cuda.empty_cache()
+
+    # One lever at a time: baseline→sdpa-torch isolates the attention backend, sdpa-torch→fla-sdpa
+    # isolates the GDN core. The ckpt legs ride the torch-core stack (the fastest so far measured);
+    # fla-sdpa-ckpt is kept so the ckpt lever is also seen on the other core.
+    legs = [
+        {"name": "baseline", "attn": "eager", "gdn": "torch", "ckpt": False, "batch": batch},
+        {"name": "sdpa-torch", "attn": "sdpa", "gdn": "torch", "ckpt": False, "batch": batch},
+        {"name": "fla-sdpa", "attn": "sdpa", "gdn": None, "ckpt": False, "batch": batch},
+        {"name": "sdpa-torch-ckpt", "attn": "sdpa", "gdn": "torch", "ckpt": True, "batch": batch},
+        {"name": "sdpa-torch-ckpt-b2x", "attn": "sdpa", "gdn": "torch", "ckpt": True, "batch": batch * 2},
+        {"name": "fla-sdpa-ckpt", "attn": "sdpa", "gdn": None, "ckpt": True, "batch": batch},
+    ]
+    out = []
+    for i, leg in enumerate(legs):
+        gdn.set_impl(leg["gdn"])
+        text_model, lm_head, _ = load_checkpoint(model, dtype, "cuda", attn_implementation=leg["attn"])
+        batches = tr.chat_batches(data, split, tok, leg["batch"], seq_len, block, seed=i)
+        try:
+            r = tr.train(text_model, lm_head, batches, block=block, mask_id=mask_id, steps=steps, lr=lr, device="cuda", checkpointing=leg["ckpt"], log=lambda *_: None)
+        finally:
+            del text_model, lm_head
+            torch.cuda.empty_cache()
+        r.pop("losses", None)
+        r.update({"leg": leg["name"], "batch": leg["batch"], "attn": leg["attn"], "ckpt": leg["ckpt"], "gdn_forced": leg["gdn"]})
+        out.append(r)
+        print(f"LEG\t{leg['name']}\tseq-tok/s {r['seq_tokens_per_s']:.0f}\tpeak {r['peak_mem_gib']} GiB\tloss {r['loss_first']:.2f}->{r['loss_last']:.2f}")
+    rep["legs"] = out
+
+    d = _run_dir("lever-bench")
+    with open(f"{d}/report.json", "w") as f:
+        json.dump(rep, f, indent=1)
+    vol.commit()
+    return rep
+
+
 @app.local_entrypoint()
 def equivalence(model: str = "Qwen/Qwen3.8-27B", layers: int = 0, block: int = 32, nblocks: int = 4, dtype: str = "bfloat16", tol: float = -1.0, oracle_kernels: str = "reference"):
     rep = equivalence_remote.remote(model, layers or None, block, nblocks, dtype, None if tol < 0 else tol, oracle_kernels)
@@ -97,4 +168,10 @@ def equivalence(model: str = "Qwen/Qwen3.8-27B", layers: int = 0, block: int = 3
 @app.local_entrypoint()
 def train_run(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/Llama-Nemotron-Post-Training-Dataset", split: str = "chat", steps: int = 200, batch: int = 4, seq_len: int = 512, block: int = 32, lr: float = 1e-5):
     rep = train_remote.remote(model, data, split, steps, batch, seq_len, block, lr)
+    print(json.dumps(rep, indent=1))
+
+
+@app.local_entrypoint()
+def lever_bench(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/Llama-Nemotron-Post-Training-Dataset", split: str = "chat", steps: int = 50, batch: int = 4, seq_len: int = 512, block: int = 32, lr: float = 1e-5):
+    rep = lever_bench_remote.remote(model, data, split, steps, batch, seq_len, block, lr)
     print(json.dumps(rep, indent=1))

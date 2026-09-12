@@ -94,13 +94,55 @@ Spare vocab rows (`[MASK]` needs no resize): 243 on both the 0.8B and the **27B*
 200 steps, batch 4 × 512 (×2 complementary views), block 32, lr 1e-5, bf16 autocast, full
 fine-tune: masked CE **11.2 → 3.95** (mean of last 10: 4.32), 0 skipped steps, **2,576
 sequence-tokens/s**, peak **53.1 GiB**. That throughput is the *reference torch kernels + eager
-attention* baseline, not the number to extrapolate the 27B from: fla with `initial_state` for
-the fork, SDPA with the 4D mask, and activation checkpointing are the obvious levers and none
-is applied yet. batch 8 at 512 OOMed an 80 GB H100 before the loss stopped materialising the
+attention* baseline, not the number to extrapolate the 27B from — the levers are measured
+below. batch 8 at 512 OOMed an 80 GB H100 before the loss stopped materialising the
 full `[B, L, 248k]` logits (now only masked positions are projected).
 
-**Not measured**: any 27B training step (needs FSDP), bf16 tolerance for §3a, fla in the
-candidate path, decoding quality on any trained checkpoint.
+### Throughput levers (Modal H100, `Qwen3.5-0.8B`, 50 steps per leg, fresh weights per leg)
+
+One lever at a time: baseline→sdpa isolates the attention backend, sdpa-torch→fla-sdpa isolates
+the GDN core, ckpt adds per-layer gradient checkpointing, b2x doubles the batch under the freed
+memory. Same 50-step shape as the loop smoke (batch 4 × 512 × 2 views, block 32, lr 1e-5, bf16).
+
+| leg | seq-tok/s | peak GiB | loss | note |
+|---|---|---|---|---|
+| baseline (eager + torch GDN core) | 2987 | 52.7 | 11.22→4.56 | reference kernels |
+| +sdpa attention | 2967 | 51.0 | 10.74→4.94 | ±0 speed, −1.8 GiB |
+| +fla GDN core | 798 | 35.9 | 10.33→4.57 | −3.7× speed, −15 GiB |
+| sdpa + torch core + ckpt | 2019 | **10.1** | 11.18→4.79 | −32% speed, −42.6 GiB |
+| …ckpt, batch ×2 | **2970** | **15.9** | 10.47→4.44 | baseline speed at ⅓ the memory |
+| fla + sdpa + ckpt | 1598 | 10.1 | 10.93→4.60 | the other core under ckpt |
+
+- **fla Triton kernel vs torch reference** (real mixer module, bf16, with per-block states,
+  `gdn.kernel_diff`): max Δ out **1.5e-3**, states **4.9e-3** — bit-identical across two runs.
+  The ADR's fla-vs-reference equivalence question is closed at bf16 tolerance.
+- **The lever that pays is checkpointing + batch**: ckpt alone trades 32% speed for 42.6 GiB;
+  giving the freed memory to batch ×2 returns to baseline throughput (2970 vs 2987) at
+  15.9 GiB, and reaches the best loss of all legs. This is the run shape the 27B extrapolation
+  should assume, not the baseline row.
+- fla core is slow in *this* fork (per-block sequential calls for per-block states); it is
+  recorded, not adopted. fla+ckpt measured faster than fla alone (1598 vs 798) — allocator
+  state, do not read as a lever.
+- Run-to-run throughput variance on one H100 node is ±20% (baseline 2498 vs 2987 on two runs
+  of the same code); losses are seed-deterministic and identical across runs. Compare legs
+  within a run, not across runs.
+- **The first ckpt measurement was invalid and that failure is now part of the record**: the
+  checkpointed function closed over the layer-loop variable, so recompute — which runs at
+  backward time, after the loop has advanced — re-ran the *last* layer for every checkpoint.
+  The forward stayed exactly right (`torch.equal`) while grads reached 13/108 parameters
+  (embed ~3× over, last mlp ~15× over) and 50-step loss moved 11.18→10.95 (b2x: loss *up*).
+  It was also the cause of the non-reentrant saved-tensor ledger mismatch (219 vs 74 on CPU
+  with the torch core, 265 vs 77 on H100 with the fla kernel) — never about fla.
+  `functools.partial` fixes it; non-reentrant mode is kept deliberately because its ledger
+  check throws on this class of silent divergence where reentrant returned wrong gradients
+  without an error. After the fix, plain and checkpointed loss trajectories and grad norms are
+  bitwise identical (tiny model, 50 steps: 5.769→2.942, layer-0 mlp grad-norm 0.10651702… both).
+  The strengthened test pins per-parameter grad equality against the plain path and a
+  100-step learning check.
+
+**Not measured**: any 27B training step (needs FSDP), decoding quality on any trained
+checkpoint, `causal-conv1d` in the image (reference conv fallback is on every leg; candidate
+lever, nvcc build risk).
 
 ## Objective, decoder, training loop (Phase 2 / 3 mechanics)
 

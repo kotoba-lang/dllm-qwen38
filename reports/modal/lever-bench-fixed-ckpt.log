@@ -1,0 +1,194 @@
+✓ Initialized. View run at 
+https://modal.com/apps/junkawasakicom/main/ap-VX3Epm6xT7WCDWr5xKJ912
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/modal
+│   _app.py
+├── 🔨 Created mount 
+│   /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/src/d
+│   llm_qwen38
+├── 🔨 Created function equivalence_remote.
+├── 🔨 Created function train_remote.
+└── 🔨 Created function lever_bench_remote.
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/473 [00:00<01:09,  6.75it/s]
+[1ALoading weights:  11%|█         | 53/473 [00:00<00:01, 257.48it/s]
+[1ALoading weights:  28%|██▊       | 133/473 [00:00<00:00, 476.62it/s]
+[1ALoading weights:  41%|████      | 195/473 [00:00<00:00, 520.05it/s]
+[1ALoading weights:  59%|█████▊    | 277/473 [00:00<00:00, 618.07it/s]
+[1ALoading weights:  90%|████████▉ | 424/473 [00:00<00:00, 877.50it/s]Loading weights: 100%|██████████| 473/473 [00:00<00:00, 690.16it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+KERNEL_DIFF     {"out_max_abs_diff": 0.00146484375, "states_max_abs_diff": 0.004913210868835449, "dtype": "torch.bfloat16"}
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:  12%|█▏        | 56/473 [00:00<00:00, 559.70it/s]
+[1ALoading weights:  46%|████▌     | 218/473 [00:00<00:00, 1175.47it/s]
+[1ALoading weights:  94%|█████████▍| 445/473 [00:00<00:00, 1670.32it/s]Loading weights: 100%|██████████| 473/473 [00:00<00:00, 1510.04it/s]
+/root/dllm_qwen38/train.py:148: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  losses.append(float(loss))
+LEG     baseline        seq-tok/s 2987  peak 52.73 GiB  loss 11.22->4.56
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:  19%|█▉        | 89/473 [00:00<00:00, 885.56it/s]
+[1ALoading weights:  50%|█████     | 238/473 [00:00<00:00, 1234.02it/s]Loading weights: 100%|██████████| 473/473 [00:00<00:00, 1570.21it/s]
+LEG     sdpa-torch      seq-tok/s 2967  peak 50.96 GiB  loss 10.74->4.94
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:   9%|▉         | 42/473 [00:00<00:01, 418.35it/s]
+[1ALoading weights:  42%|████▏     | 199/473 [00:00<00:00, 1090.89it/s]
+[1ALoading weights:  84%|████████▎ | 396/473 [00:00<00:00, 1481.15it/s]Loading weights: 100%|██████████| 473/473 [00:00<00:00, 1431.98it/s]
+LEG     fla-sdpa        seq-tok/s 798   peak 35.95 GiB  loss 10.33->4.57
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:  10%|█         | 49/473 [00:00<00:00, 489.19it/s]
+[1ALoading weights:  43%|████▎     | 205/473 [00:00<00:00, 1115.86it/s]
+[1ALoading weights:  86%|████████▌ | 406/473 [00:00<00:00, 1523.36it/s]Loading weights: 100%|██████████| 473/473 [00:00<00:00, 1459.00it/s]
+LEG     sdpa-torch-ckpt seq-tok/s 2019  peak 10.13 GiB  loss 11.18->4.79
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:   9%|▊         | 41/473 [00:00<00:01, 405.54it/s]
+[1ALoading weights:  44%|████▎     | 206/473 [00:00<00:00, 1126.47it/s]
+[1ALoading weights:  89%|████████▉ | 420/473 [00:00<00:00, 1584.36it/s]Loading weights: 100%|██████████| 473/473 [00:00<00:00, 1468.13it/s]
+LEG     sdpa-torch-ckpt-b2x     seq-tok/s 2970  peak 15.92 GiB  loss 10.47->4.44
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:  12%|█▏        | 56/473 [00:00<00:00, 559.14it/s]
+[1ALoading weights:  47%|████▋     | 221/473 [00:00<00:00, 1198.57it/s]
+[1ALoading weights:  96%|█████████▋| 456/473 [00:00<00:00, 1723.16it/s]
+[1ALoading weights: 100%|██████████| 473/473 [00:00<00:00, 1535.17it/s]
+LEG     fla-sdpa-ckpt   seq-tok/s 1598  peak 10.06 GiB  loss 10.93->4.60
+{
+ "model": "Qwen/Qwen3.5-0.8B",
+ "data": "nvidia/Llama-Nemotron-Post-Training-Dataset",
+ "split": "chat",
+ "steps_per_leg": 50,
+ "seq_len": 512,
+ "block": 32,
+ "lr": 1e-05,
+ "kernel_diff": {
+  "out_max_abs_diff": 0.00146484375,
+  "states_max_abs_diff": 0.004913210868835449,
+  "dtype": "torch.bfloat16"
+ },
+ "legs": [
+  {
+   "steps": 50,
+   "skipped_steps": 0,
+   "loss_first": 11.215171813964844,
+   "loss_last": 4.564378261566162,
+   "loss_mean_last10": 4.738088941574096,
+   "seq_tokens": 102400,
+   "seq_tokens_per_s": 2987.0900296386267,
+   "seconds": 34.28085494041443,
+   "peak_mem_gib": 52.73,
+   "checkpointing": false,
+   "gdn_impl": "reference",
+   "gdn_reason": "",
+   "leg": "baseline",
+   "batch": 4,
+   "attn": "eager",
+   "ckpt": false,
+   "gdn_forced": "torch"
+  },
+  {
+   "steps": 50,
+   "skipped_steps": 0,
+   "loss_first": 10.741297721862793,
+   "loss_last": 4.939863204956055,
+   "loss_mean_last10": 4.580947780609131,
+   "seq_tokens": 102400,
+   "seq_tokens_per_s": 2967.2636381380416,
+   "seconds": 34.50990962982178,
+   "peak_mem_gib": 50.96,
+   "checkpointing": false,
+   "gdn_impl": "reference",
+   "gdn_reason": "",
+   "leg": "sdpa-torch",
+   "batch": 4,
+   "attn": "sdpa",
+   "ckpt": false,
+   "gdn_forced": "torch"
+  },
+  {
+   "steps": 50,
+   "skipped_steps": 0,
+   "loss_first": 10.334905624389648,
+   "loss_last": 4.571384906768799,
+   "loss_mean_last10": 4.64534592628479,
+   "seq_tokens": 102400,
+   "seq_tokens_per_s": 798.2773715973012,
+   "seconds": 128.2762153148651,
+   "peak_mem_gib": 35.95,
+   "checkpointing": false,
+   "gdn_impl": "fla",
+   "gdn_reason": "",
+   "leg": "fla-sdpa",
+   "batch": 4,
+   "attn": "sdpa",
+   "ckpt": false,
+   "gdn_forced": null
+  },
+  {
+   "steps": 50,
+   "skipped_steps": 0,
+   "loss_first": 11.177696228027344,
+   "loss_last": 4.787758827209473,
+   "loss_mean_last10": 4.584293985366822,
+   "seq_tokens": 102400,
+   "seq_tokens_per_s": 2019.3929190367307,
+   "seconds": 50.708308935165405,
+   "peak_mem_gib": 10.13,
+   "checkpointing": true,
+   "gdn_impl": "reference",
+   "gdn_reason": "",
+   "leg": "sdpa-torch-ckpt",
+   "batch": 4,
+   "attn": "sdpa",
+   "ckpt": true,
+   "gdn_forced": "torch"
+  },
+  {
+   "steps": 50,
+   "skipped_steps": 0,
+   "loss_first": 10.472869873046875,
+   "loss_last": 4.437893390655518,
+   "loss_mean_last10": 4.48595232963562,
+   "seq_tokens": 204800,
+   "seq_tokens_per_s": 2969.9201506858376,
+   "seconds": 68.95808291435242,
+   "peak_mem_gib": 15.92,
+   "checkpointing": true,
+   "gdn_impl": "reference",
+   "gdn_reason": "",
+   "leg": "sdpa-torch-ckpt-b2x",
+   "batch": 8,
+   "attn": "sdpa",
+   "ckpt": true,
+   "gdn_forced": "torch"
+  },
+  {
+   "steps": 50,
+   "skipped_steps": 0,
+   "loss_first": 10.932496070861816,
+   "loss_last": 4.596250057220459,
+   "loss_mean_last10": 4.647947978973389,
+   "seq_tokens": 102400,
+   "seq_tokens_per_s": 1598.0962127402472,
+   "seconds": 64.07624220848083,
+   "peak_mem_gib": 10.06,
+   "checkpointing": true,
+   "gdn_impl": "fla",
+   "gdn_reason": "",
+   "leg": "fla-sdpa-ckpt",
+   "batch": 4,
+   "attn": "sdpa",
+   "ckpt": true,
+   "gdn_forced": null
+  }
+ ]
+}
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/junkawasakicom/main/ap-VX3Epm6xT7WCDWr5xKJ912

@@ -1,0 +1,196 @@
+✓ Initialized. View run at 
+https://modal.com/apps/junkawasakicom/main/ap-2EjGLJfdWyTNiZZIU6lOph
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/modal
+│   _app.py
+├── 🔨 Created mount 
+│   /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/src/d
+│   llm_qwen38
+├── 🔨 Created function equivalence_remote.
+├── 🔨 Created function train_remote.
+└── 🔨 Created function lever_bench_remote.
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/473 [00:00<02:13,  3.53it/s]
+[1ALoading weights:   9%|▉         | 44/473 [00:00<00:02, 145.66it/s]
+[1ALoading weights:  22%|██▏       | 104/473 [00:00<00:01, 291.81it/s]
+[1ALoading weights:  36%|███▋      | 172/473 [00:00<00:00, 410.55it/s]
+[1ALoading weights:  51%|█████     | 239/473 [00:00<00:00, 488.23it/s]
+[1ALoading weights:  68%|██████▊   | 324/473 [00:00<00:00, 595.44it/s]
+[1ALoading weights: 100%|██████████| 473/473 [00:00<00:00, 532.37it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+/root/dllm_qwen38/gdn.py:183: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  "out_max_abs_diff": float((o_fla.float() - o_ref.float()).abs().max()),
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:   8%|▊         | 36/473 [00:00<00:01, 354.67it/s]
+[1ALoading weights:  34%|███▎      | 159/473 [00:00<00:00, 865.67it/s]
+[1ALoading weights:  65%|██████▍   | 306/473 [00:00<00:00, 1135.93it/s]Loading weights: 100%|██████████| 473/473 [00:00<00:00, 1294.04it/s]
+LEG     baseline        seq-tok/s 2631  peak 52.73 GiB  loss 11.22->4.56
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:  21%|██        | 98/473 [00:00<00:00, 971.36it/s]
+[1ALoading weights:  44%|████▍     | 209/473 [00:00<00:00, 1033.28it/s]
+[1ALoading weights:  88%|████████▊ | 417/473 [00:00<00:00, 1505.06it/s]Loading weights: 100%|██████████| 473/473 [00:00<00:00, 1454.50it/s]
+LEG     fla-sdpa        seq-tok/s 683   peak 35.93 GiB  loss 10.74->4.94
+
+[1ALoading weights:   0%|          | 0/473 [00:00<?, ?it/s]
+[1ALoading weights:   9%|▉         | 42/473 [00:00<00:01, 418.88it/s]
+[1ALoading weights:  41%|████      | 194/473 [00:00<00:00, 1061.53it/s]
+[1ALoading weights:  71%|███████   | 336/473 [00:00<00:00, 1224.14it/s]Loading weights: 100%|██████████| 473/473 [00:00<00:00, 1349.42it/s]
+Traceback (most recent call last):
+  File "/pkg/modal/_runtime/container_io_manager.py", line 987, in handle_input_exception
+    yield
+  File "/pkg/modal/_container_entrypoint.py", line 189, in run_input_sync
+    values = io_context.call_function_sync()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/pkg/modal/_runtime/container_io_manager.py", line 266, in call_function_sync
+    expected_value_or_values = self.finalized_function.callable(*args, **kwargs)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/modal_app.py", line 134, in lever_bench_remote
+    r = tr.train(text_model, lm_head, batches, block=block, mask_id=mask_id, steps=steps, lr=lr, device="cuda", checkpointing=leg["ckpt"], log=lambda *_: None)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/dllm_qwen38/train.py", line 145, in train
+    loss.backward()
+  File "/usr/local/lib/python3.12/site-packages/torch/_tensor.py", line 623, in backward
+    torch.autograd.backward(
+  File "/usr/local/lib/python3.12/site-packages/torch/autograd/__init__.py", line 395, in backward
+    _engine_run_backward(
+  File "/usr/local/lib/python3.12/site-packages/torch/autograd/graph.py", line 1072, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/torch/utils/checkpoint.py", line 1373, in unpack_hook
+    frame.check_recomputed_tensors_match(gid)
+  File "/usr/local/lib/python3.12/site-packages/torch/utils/checkpoint.py", line 1038, in check_recomputed_tensors_match
+    raise CheckpointError(
+torch.utils.checkpoint.CheckpointError: torch.utils.checkpoint: A different number of tensors was saved during the original forward and recomputation.
+Number of tensors saved during forward: 265
+Number of tensors saved during recomputation: 77.
+
+Tip: To see a more detailed error message, either pass `debug=True` to
+`torch.utils.checkpoint.checkpoint(...)` or wrap the code block
+with `with torch.utils.checkpoint.set_checkpoint_debug_enabled(True):` to
+enable checkpoint‑debug mode globally.
+
+If this error occurs under torch.compile with automatic_dynamic_shapes enabled,
+it may be because the recomputation selected a different compiled graph than the
+forward pass (e.g., a dynamic graph instead of the original static graph).
+To fix this, either:
+  - Use torch._dynamo.mark_dynamic() to explicitly mark varying dimensions as
+    dynamic upfront, avoiding the static-to-dynamic transition.
+  - Call torch._C._dynamo.eval_frame._set_lru_cache(False) to disable LRU cache
+    reordering, which can change which graph is checked first between forward
+    and recompute.
+See https://github.com/pytorch/pytorch/issues/166926 for more details and
+workaround examples.
+
+Stopping app - uncaught exception raised locally: CheckpointError('torch.utils.checkpoint: A different number of tensors was saved during the original forward and recomputation.\nNumber of tensors saved during forward: 265\nNumber of tensors saved during recomputation: 77.\n\nTip: To see a more detailed error message, either pass `debug=True` to\n`torch.utils.checkpoint.checkpoint(...)` or wrap the code block\nwith `with torch.utils.checkpoint.set_checkpoint_debug_enabled(True):` to\nenable checkpoint‑debug mode globally.\n\nIf this error occurs under torch.compile with automatic_dynamic_shapes enabled,\nit may be because the recomputation selected a different compiled graph than the\nforward pass (e.g., a dynamic graph instead of the original static graph).\nTo fix this, either:\n  - Use torch._dynamo.mark_dynamic() to explicitly mark varying dimensions as\n    dynamic upfront, avoiding the static-to-dynamic transition.\n  - Call torch._C._dynamo.eval_frame._set_lru_cache(False) to disable LRU cache\n    reordering, which can change .
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/modal │
+│ _app.py:165 in lever_bench                                                   │
+│                                                                              │
+│   164 def lever_bench(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/ │
+│ ❱ 165 │   rep = lever_bench_remote.remote(model, data, split, steps, batch,  │
+│   166 │   print(json.dumps(rep, indent=1))                                   │
+│                                                                              │
+│ /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/.venv │
+│ /lib/python3.12/site-packages/modal/_object.py:46 in wrapped                 │
+│                                                                              │
+│    45 │   │   await self.hydrate()                                           │
+│ ❱  46 │   │   return await method(self, *args, **kwargs)                     │
+│    47                                                                        │
+│                                                                              │
+│ /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/.venv │
+│ /lib/python3.12/site-packages/modal/_functions.py:1893 in remote             │
+│                                                                              │
+│   1892 │   │                                                                 │
+│ ❱ 1893 │   │   return await self._call_function(args, kwargs)                │
+│   1894                                                                       │
+│                                                                              │
+│ /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/.venv │
+│ /lib/python3.12/site-packages/modal/_functions.py:1830 in _call_function     │
+│                                                                              │
+│   1829 │   │                                                                 │
+│ ❱ 1830 │   │   return await invocation.run_function()                        │
+│   1831                                                                       │
+│                                                                              │
+│ /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/.venv │
+│ /lib/python3.12/site-packages/modal/_functions.py:503 in run_function        │
+│                                                                              │
+│    502 │   │   │   # No more retries left.                                   │
+│ ❱  503 │   │   │   return await _process_result(                             │
+│    504 │   │   │   │   await_response.output.result, await_response.output.d │
+│                                                                              │
+│ /Users/junkawasaki/github/com-junkawasaki/orgs/kotoba-lang/dllm-qwen38/.venv │
+│ /lib/python3.12/site-packages/modal/_utils/function_utils.py:572 in          │
+│ _process_result                                                              │
+│                                                                              │
+│   571 │   │   │                                                              │
+│ ❱ 572 │   │   │   raise exc_with_hints(exc)                                  │
+│   573                                                                        │
+│                                                                              │
+│     ...Remote call to Modal Function (ta-01M29PJFSW8SP9D6N8VRW4V63R)...      │
+│                                                                              │
+│ /root/modal_app.py:134 in lever_bench_remote                                 │
+│                                                                              │
+│ ❱ 134 r = tr.train(text_model, lm_head, batches, block=block, mask_id=mask_i │
+│                                                                              │
+│                                                                              │
+│ /root/dllm_qwen38/train.py:145 in train                                      │
+│                                                                              │
+│ ❱ 145 loss.backward()                                                        │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/_tensor.py:623 in backward     │
+│                                                                              │
+│ ❱ 623 torch.autograd.backward(                                               │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/autograd/__init__.py:395 in    │
+│ backward                                                                     │
+│                                                                              │
+│ ❱ 395 _engine_run_backward(                                                  │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/autograd/graph.py:1072 in      │
+│ _engine_run_backward                                                         │
+│                                                                              │
+│ ❱ 1072 return Variable._execution_engine.run_backward(  # Calls into the C++ │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/utils/checkpoint.py:1373 in    │
+│ unpack_hook                                                                  │
+│                                                                              │
+│ ❱ 1373 frame.check_recomputed_tensors_match(gid)                             │
+│                                                                              │
+│                                                                              │
+│ /usr/local/lib/python3.12/site-packages/torch/utils/checkpoint.py:1038 in    │
+│ check_recomputed_tensors_match                                               │
+│                                                                              │
+│ ❱ 1038 raise CheckpointError(                                                │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+CheckpointError: torch.utils.checkpoint: A different number of tensors was saved
+during the original forward and recomputation.
+Number of tensors saved during forward: 265
+Number of tensors saved during recomputation: 77.
+
+Tip: To see a more detailed error message, either pass `debug=True` to
+`torch.utils.checkpoint.checkpoint(...)` or wrap the code block
+with `with torch.utils.checkpoint.set_checkpoint_debug_enabled(True):` to
+enable checkpoint‑debug mode globally.
+
+If this error occurs under torch.compile with automatic_dynamic_shapes enabled,
+it may be because the recomputation selected a different compiled graph than the
+forward pass (e.g., a dynamic graph instead of the original static graph).
+To fix this, either:
+  - Use torch._dynamo.mark_dynamic() to explicitly mark varying dimensions as
+    dynamic upfront, avoiding the static-to-dynamic transition.
+  - Call torch._C._dynamo.eval_frame._set_lru_cache(False) to disable LRU cache
+    reordering, which can change which graph is checked first between forward
+    and recompute.
+See https://github.com/pytorch/pytorch/issues/166926 for more details and
+workaround examples.
+
