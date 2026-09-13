@@ -437,7 +437,8 @@ def _save_checkpoint(ckpt_dir: str, gstep: int, root, opt, seq_tokens: int, rank
             os.makedirs(fp_dir, exist_ok=True)
             with open(os.path.join(fp_dir, f"step-{gstep}.tsv"), "w") as f:
                 for r, s in enumerate(fps):
-                    f.write(f"{r}\t{s}\n")
+                    m, o = s.split()  # "model-fp opt-fp" -> the documented 3 fields
+                    f.write(f"{r}\t{m}\t{o}\n")
     dcp_save(
         {
             "model": msd,
@@ -500,7 +501,15 @@ def _load_checkpoint(ckpt_dir: str, gstep: int, root, opt) -> int:
                     break
         bad = expected is None or expected != fp
         if expected is None and rank == 0:
-            print(f"CKPT-FP\tnoverify\t{fp_file} missing — checkpoint predates fingerprinted saves", flush=True)
+            # fail closed — but say WHICH kind of no-verify: a missing file (checkpoint
+            # predates fingerprinted saves) and a present-but-unparseable one are different
+            # defects (the clean-run gate 2026-09-13 caught exactly this: the writer emitted
+            # 2 fields, the parser wanted 3, every rank read "nothing", the message said
+            # "missing" and sent the diagnosis the wrong way)
+            if not os.path.exists(fp_file):
+                print(f"CKPT-FP\tnoverify\t{fp_file} missing — checkpoint predates fingerprinted saves", flush=True)
+            else:
+                print(f"CKPT-FP\tnoverify\t{fp_file} present but no parseable line for rank {rank}", flush=True)
         flag = torch.tensor([bad], device="cuda")
         dist.all_reduce(flag, op=dist.ReduceOp.MIN)
         _LOAD_FP_BAD = bool(flag.item())
