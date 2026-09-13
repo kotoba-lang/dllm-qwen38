@@ -370,21 +370,22 @@ def _latest_checkpoint(ckpt_dir: str) -> int | None:
     return max(ns) if ns else None
 
 
-_CKPT_FP_ON = False  # --ckpt-fingerprint: hash every shard of the model+optimizer state at save and load
-_SAVE_FP: dict = {}  # (gstep, rank) -> "model-fp optim-fp", written at save, read back at load
+_CKPT_FP_ON = False  # hash every shard of the model+optimizer state at save and at load (auto-on for resume/selftest; --ckpt-fingerprint forces it on)
+_LOAD_FP_BAD = False  # set at load: any rank's restored state failed (or could not be) fingerprint verification — all-reduced, so identical on every rank
+_RESUME_LOSS_BAND = 5e-3  # pre-registered ambient band (owner-approved re-spec 2026-09-13): two runs of the IDENTICAL config diverge from the update path alone (fresh-vs-fresh, no checkpoint: 3.6e-5 @ step 2 -> 2.4e-3 @ step 53); resumed-vs-uninterrupted measured maxima 2.12e-3 / 2.03e-3 / 2.22e-3. A broken restore (wrong params/moments/data position) diverges O(0.1-1) — an order of magnitude past the band
 
 
 def _fingerprint_state_dict(sd) -> str:
-    """SHA256 over the raw bytes of every tensor in a flat state-dict map (probe-only).
+    """SHA256 over the raw bytes of every tensor in a flat state-dict map (fingerprint).
 
-    For the checkpoint-fidelity probe: hashes exactly what will be saved / was just
-    loaded — DTensor entries hash their local shard, plain entries hash the whole tensor
-    — so a one-ULP defect anywhere in the round-trip is caught exactly without gathering
-    full tensors across ranks. Per-rank hashes are comparable across the save and load of
-    one selftest because the shard each rank holds is deterministic given the same
-    build_and_shard. Hashes the load-time state on CPU: at 27B that is ~27 GiB of host
-    copies per fingerprint call, which is why this is opt-in (--ckpt-fingerprint) and the
-    0.8B selftest, not the training windows, pays for it.
+    For the checkpoint-fidelity gate: hashes exactly what will be saved / was just loaded —
+    DTensor entries hash their local shard, plain entries hash the whole tensor — so a
+    one-ULP defect anywhere in the round-trip is caught exactly without gathering full
+    tensors across ranks. Per-rank hashes are comparable across the save and the load of
+    one run (and across containers of the same world size) because the shard each rank
+    holds is deterministic given the same build_and_shard. Hashes on CPU: at 27B that is
+    ~27 GiB of host copies per call — seconds, not minutes — which is why mid-window
+    cadence saves skip it and only window-end saves + loads pay.
     """
     import hashlib
 
@@ -404,7 +405,7 @@ def _fingerprint_state_dict(sd) -> str:
     return h.hexdigest()[:16]
 
 
-def _save_checkpoint(ckpt_dir: str, gstep: int, root, opt, seq_tokens: int, rank: int) -> None:
+def _save_checkpoint(ckpt_dir: str, gstep: int, root, opt, seq_tokens: int, rank: int, fingerprint: bool = True) -> None:
     """DCP-sharded save: model + optimizer + (step, seq_tokens); atomic via tmp→rename.
 
     dcp.save is collective — every rank writes its own shard into the same tmp dir — so the
@@ -422,10 +423,21 @@ def _save_checkpoint(ckpt_dir: str, gstep: int, root, opt, seq_tokens: int, rank
     """
     msd = get_model_state_dict(root)
     osd = get_optimizer_state_dict(root, opt)
-    if _CKPT_FP_ON:
+    if _CKPT_FP_ON and fingerprint:
+        # write the per-rank fingerprints next to the checkpoint (rank\tmodel-fp\topt-fp): the
+        # load side — same process or a fresh container — reads this file back and verifies its
+        # own shards bit-exact. Mid-window cadence saves skip the hash (~27 GiB host copies at
+        # 27B); window-end saves and the selftest's mid save pay it
         fp = f"{_fingerprint_state_dict(msd)} {_fingerprint_state_dict(osd['state'])}"
-        _SAVE_FP[(gstep, rank)] = fp
         print(f"CKPT-FP\tsave\trank {rank}\tgstep {gstep}\t{fp}", flush=True)
+        fps = [None] * dist.get_world_size()
+        dist.all_gather_object(fps, fp)
+        if rank == 0:
+            fp_dir = os.path.join(ckpt_dir, "fingerprints")
+            os.makedirs(fp_dir, exist_ok=True)
+            with open(os.path.join(fp_dir, f"step-{gstep}.tsv"), "w") as f:
+                for r, s in enumerate(fps):
+                    f.write(f"{r}\t{s}\n")
     dcp_save(
         {
             "model": msd,
@@ -468,16 +480,31 @@ def _load_checkpoint(ckpt_dir: str, gstep: int, root, opt) -> int:
     dcp_load({"model": msd, "optim": osd, **carry}, checkpoint_id=_ckpt_path(ckpt_dir, gstep))
     set_model_state_dict(root, msd)
     set_optimizer_state_dict(root, opt, optim_state_dict=osd)
+    global _LOAD_FP_BAD
     if _CKPT_FP_ON:
+        # verify the restore against the fingerprints written at save: same process or a
+        # fresh container, the check is the same — read step-<g>.tsv, hash the loaded state,
+        # compare per rank. Any rank mismatching (or the file missing — fail closed: an
+        # unverified restore is not a verified one) all-reduces to _LOAD_FP_BAD on every rank
         rank = dist.get_rank()
         fp = (f"{_fingerprint_state_dict(get_model_state_dict(root))} "
               f"{_fingerprint_state_dict(get_optimizer_state_dict(root, opt)['state'])}")
         print(f"CKPT-FP\tload\trank {rank}\tgstep {gstep}\t{fp}", flush=True)
-        prev = _SAVE_FP.get((gstep, rank))
-        if prev is not None:  # in-process selftest: same rank, same shard, hashes comparable
-            flag = torch.tensor([prev == fp], device="cuda")
-            dist.all_reduce(flag, op=dist.ReduceOp.MIN)
-            print(f"CKPT-FP-MATCH\tgstep {gstep}\trank {rank}\texact {bool(flag.item())}", flush=True)
+        fp_file = os.path.join(ckpt_dir, "fingerprints", f"step-{gstep}.tsv")
+        expected = None
+        if os.path.exists(fp_file):
+            for ln in open(fp_file):
+                parts = ln.split("\t")
+                if len(parts) >= 3 and parts[0] == str(rank):
+                    expected = parts[1].strip() + " " + parts[2].strip()
+                    break
+        bad = expected is None or expected != fp
+        if expected is None and rank == 0:
+            print(f"CKPT-FP\tnoverify\t{fp_file} missing — checkpoint predates fingerprinted saves", flush=True)
+        flag = torch.tensor([bad], device="cuda")
+        dist.all_reduce(flag, op=dist.ReduceOp.MIN)
+        _LOAD_FP_BAD = bool(flag.item())
+        print(f"CKPT-FP-MATCH\tgstep {gstep}\trank {rank}\tmatch {not bad}\tall_ranks_ok {not _LOAD_FP_BAD}", flush=True)
     return int(carry["seq_tokens"].item())
 
 
@@ -523,6 +550,7 @@ def train_fsdp(
     ckpt_every: int = 0,
     checkpointing: bool = False,
     mem_history: bool = False,
+    fingerprint_saves: str = "window_end",  # "window_end": only the last step's save pays the fingerprint hash; "all": cadence saves too (selftest)
     grad_clip: float = 1.0,
     log_every: int = 10,
     log=print,
@@ -621,7 +649,8 @@ def train_fsdp(
             raise
         if ckpt_dir and ((ckpt_every and gstep % ckpt_every == 0) or gstep == last):
             # window end always saves (that is how the next window chains); ckpt_every=0 → end only
-            _save_checkpoint(ckpt_dir, gstep, root, opt, seq_tokens_start + seq_tokens_win, rank)
+            _save_checkpoint(ckpt_dir, gstep, root, opt, seq_tokens_start + seq_tokens_win, rank,
+                             fingerprint=(gstep == last) or fingerprint_saves == "all")
         if rank == 0 and (local_step % log_every == 0 or local_step == n_steps):
             el = time.time() - t0
             log(f"step {gstep}\tloss {losses[-1]:.4f}\ttargets {n_global}\tseq-tok/s {seq_tokens_win / el:.0f}\telapsed {el:.0f}s")
@@ -697,11 +726,11 @@ def main(argv=None) -> int:
     p.add_argument("--ckpt-dir", default=None, help="checkpoint directory on the persistent volume; enables window-end saves (--ckpt-every for mid-window cadence)")
     p.add_argument("--ckpt-every", type=int, default=0, help="save every N global steps (0 = window end only)")
     p.add_argument("--resume", action="store_true", help="resume from the latest checkpoint in --ckpt-dir; --steps is THIS window's length")
-    p.add_argument("--resume-selftest", action="store_true", help="uninterrupted window with a mid-run save, then a SAME-process cold rebuild + resume from the midpoint; the re-run's second-half losses must be bit-exact against the uninterrupted ones — isolates checkpoint fidelity (params+moments+data position+global step) from the cross-container kernel noise that makes separate Modal containers differ at ~1e-6 relative from step 1 (measured 2026-09-12: identical data fingerprints, H100x8 both, loss diff 3.6e-5 at step 1 amplified chaotically to ~2.4e-3 by step 60)")
-    p.add_argument("--ckpt-fingerprint", action="store_true", help="hash every shard of the model+optimizer state at save and at load (CKPT-FP lines; the in-process selftest also all-reduces a per-rank bit-exact match) — separates round-trip fidelity from the update-path noise the loss comparison cannot")
+    p.add_argument("--resume-selftest", action="store_true", help="uninterrupted window with a mid-run save, then a SAME-process cold rebuild + resume from the midpoint; the gate (re-specified 2026-09-13, owner-approved) requires the save→load round-trip proven bit-exact on every rank (SHA256 fingerprints written to the ckpt dir and verified at load), seq_tokens continuity, and the resumed trajectory inside the pre-registered ambient band (band 5e-3; measured fresh-vs-fresh maxima 2.0-2.4e-3 from update-path atomics alone — per-run bit-identical losses are unachievable, SDPA-backward atomics, so loss diff no longer measures checkpoint fidelity)")
+    p.add_argument("--ckpt-fingerprint", action="store_true", help="hash every shard of the model+optimizer state at save (CKPT-FP save lines, written to ckpt_dir/fingerprints/step-<g>.tsv) and verify the restore against them at load (CKPT-FP load lines; any rank mismatching or the file missing → fail closed, all-reduced to a global bad flag; a --resume window exits 1 before training on an unverified restore). Auto-on for --resume/--resume-selftest; mid-window cadence saves skip the hash unless --resume-selftest (fingerprint_saves=all)")
     a = p.parse_args(argv)
     global _CKPT_FP_ON
-    _CKPT_FP_ON = a.ckpt_fingerprint
+    _CKPT_FP_ON = a.ckpt_fingerprint or a.resume or a.resume_selftest  # resume windows verify their restore (mismatch → exit 1)
     if a.seq_len % a.block:
         print("COULD-NOT-MEASURE seq-len must be a multiple of block", file=sys.stderr)
         return 2
@@ -752,6 +781,12 @@ def main(argv=None) -> int:
             dist.destroy_process_group()
             return 2
         seq_tokens_start = _load_checkpoint(a.ckpt_dir, last, _Root(text_model, lm_head), opt)
+        if _LOAD_FP_BAD:
+            # production guard (owner-approved 2026-09-13): a resume window that cannot prove
+            # its restore bit-exact must not train 8h on it — fail before the first step
+            print("CKPT-FP\trestore failed fingerprint verification — refusing to train on it", file=sys.stderr, flush=True)
+            dist.destroy_process_group()
+            return 1
         start_step = last
         if rank == 0:
             print(f"RESUME\tfrom step {start_step}\tseq_tokens {seq_tokens_start}", flush=True)
@@ -771,16 +806,28 @@ def main(argv=None) -> int:
         block=a.block, mask_id=mask_id, n_steps=a.steps, start_step=start_step, seq_tokens_start=seq_tokens_start,
         ckpt_dir=a.ckpt_dir, ckpt_every=(a.steps // 2) if a.resume_selftest else a.ckpt_every,
         checkpointing=a.grad_checkpoint, mem_history=a.mem_history,
+        fingerprint_saves="all" if a.resume_selftest else "window_end",
     )
     rep.update({"model": a.model, "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "layers": a.layers, "ckpt_dir": a.ckpt_dir, "ckpt_every": a.ckpt_every, "resume": a.resume})
 
     if a.resume_selftest:
-        # the fidelity gate: cold-rebuild (fresh weights, fresh shard, fresh optimizer — exactly
-        # what a chained window does), load the mid checkpoint, replay the data stream, re-run
-        # the second half with the same global step numbering. Same process ⇒ same NCCL ring,
-        # same cuBLAS handles ⇒ any nonzero loss diff is the checkpoint mechanism's fault, not
-        # the environment's. The second half saves nothing (ckpt_dir=None), so the first run's
-        # checkpoints stay intact for inspection
+        # the fidelity gate (re-specified 2026-09-13, owner-approved after measurement):
+        # cold-rebuild (fresh weights, fresh shard, fresh optimizer — exactly what a chained
+        # window does), load the mid checkpoint, replay the data stream, re-run the second
+        # half with the same global step numbering. The gate is NO LONGER bit-identical
+        # losses: two runs of the identical config diverge from the update path alone
+        # (measured fresh-vs-fresh, no checkpoint involved: 3.6e-5 at step 2 -> 2.4e-3 by
+        # step 53 — SDPA-backward atomics make per-run bit-identity unachievable), and the
+        # earlier premise "same process ⇒ any nonzero loss diff is the checkpoint's fault"
+        # was measured false. The gate instead requires: (a) the save→load round-trip
+        # bit-exact on EVERY rank, proven by SHA256 fingerprints of the model + optimizer
+        # shards written at save and verified at load (CKPT-FP / CKPT-FP-MATCH); (b) data
+        # continuity (seq_tokens exact); (c) the resumed trajectory inside the
+        # pre-registered ambient band (measured maxima 2.0-2.4e-3 across 3 runs; band 5e-3
+        # — a broken restore diverges O(0.1-1), an order past the band); (d) the structural
+        # invariants checked below (finite loss, weight_spread 0, exit). The second half
+        # saves nothing (ckpt_dir=None), so the first run's checkpoints stay intact for
+        # inspection
         import gc
 
         mid = a.steps // 2
@@ -804,12 +851,24 @@ def main(argv=None) -> int:
         )
         ref, got = rep["losses"][mid:], rep2["losses"]
         diffs = [abs(x - y) for x, y in zip(ref, got)] if len(ref) == len(got) else None
-        exact = diffs is not None and all(d == 0.0 for d in diffs)
         max_abs = max(diffs) if diffs else float("nan")
-        rep["resume_selftest"] = {"exact": exact, "n": len(got), "max_abs_diff": max_abs, "seq_tokens_match": rep["seq_tokens"] == rep2["seq_tokens"]}
+        # fp_match: the round-trip's own proof — SHA256 of every rank's model+optimizer shards
+        # taken at save, verified at load, all-reduced (_LOAD_FP_BAD is identical on all ranks).
+        # loss_band_ok: the resumed trajectory stayed inside the pre-registered ambient band
+        # (measured fresh-vs-fresh maxima 2.0-2.4e-3; a broken restore diverges O(0.1-1))
+        fp_match = not _LOAD_FP_BAD
+        rep["resume_selftest"] = {
+            "fp_match": fp_match,
+            "loss_band_ok": diffs is not None and max_abs <= _RESUME_LOSS_BAND,
+            "band": _RESUME_LOSS_BAND,
+            "n": len(got),
+            "max_abs_diff": max_abs,
+            "seq_tokens_match": rep["seq_tokens"] == rep2["seq_tokens"],
+        }
         if rank == 0:
-            msg = f"SELFTEST\texact {exact}\tn {len(got)}\tmax_abs_diff {max_abs:.3g}\tseq_tokens_match {rep['resume_selftest']['seq_tokens_match']}"
-            if diffs and not exact:
+            msg = (f"SELFTEST\tfp_match {fp_match}\tn {len(got)}\tmax_abs_diff {max_abs:.3g} (band {_RESUME_LOSS_BAND:.1e})"
+                   f"\tseq_tokens_match {rep['resume_selftest']['seq_tokens_match']}")
+            if diffs and max_abs > 0:
                 k = next(i for i, d in enumerate(diffs) if d > 0)
                 msg += f"\tfirst diff @ global step {mid + 1 + k}: resumed {got[k]!r} vs uninterrupted {ref[k]!r}"
             print(msg, flush=True)
@@ -822,7 +881,10 @@ def main(argv=None) -> int:
                 json.dump(rep, f, indent=1, default=str)
         ok = rep["loss_last"] is not None and math.isfinite(rep["loss_last"]) and rep["weight_spread"] == 0.0
         if a.resume_selftest:
-            ok = ok and rep["resume_selftest"]["exact"] and rep["resume_selftest"]["seq_tokens_match"]
+            # the re-specified fidelity gate (owner-approved 2026-09-13): round-trip proven
+            # bit-exact per rank (fp_match), data continuity (seq_tokens), and the resumed
+            # trajectory inside the pre-registered ambient band (loss_band_ok)
+            ok = ok and rep["resume_selftest"]["fp_match"] and rep["resume_selftest"]["loss_band_ok"] and rep["resume_selftest"]["seq_tokens_match"]
         print("REPORT\t" + line)
         dist.destroy_process_group()
         return 0 if ok else 1
