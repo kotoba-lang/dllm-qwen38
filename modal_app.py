@@ -3,6 +3,8 @@
     modal run modal_app.py::equivalence --model Qwen/Qwen3.8-27B            # ADR §3a on the 27B itself
     modal run modal_app.py::equivalence --model Qwen/Qwen3.8-27B --layers 16 --dtype float32
     modal run modal_app.py::train_run --model Qwen/Qwen3.5-0.8B --steps 200  # Phase 2 loop smoke, tok/s
+    modal run modal_app.py::eval_run --mode ar                              # GSM8K subset, AR baseline
+    modal run modal_app.py::eval_run --mode dllm --ckpt dllm-27b-1pct       # block-diffusion decode
 
 Everything the container produces lands in the volume `dllm-qwen38-cache` (`/cache/hf` = HF
 cache, `/cache/runs/<name>/` = reports + checkpoints) and is echoed back as the return value.
@@ -247,6 +249,53 @@ def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_l
 @app.local_entrypoint()
 def fsdp_run(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/Llama-Nemotron-Post-Training-Dataset", split: str = "chat", steps: int = 100, batch: int = 8, seq_len: int = 512, block: int = 32, lr: float = 1e-5, layers: int = 0, nproc: int = 8, grad_checkpoint: bool = False, mem_history: bool = False, ckpt: str = "", ckpt_every: int = 0, resume: bool = False, selftest: bool = False):
     rep = fsdp_remote.remote(model, data, split, steps, batch, seq_len, block, lr, layers or None, nproc, grad_checkpoint, mem_history, ckpt, ckpt_every, resume, selftest)
+    print(json.dumps(rep, indent=1))
+
+
+@app.function(image=image, gpu="H100", timeout=16 * 3600, volumes={"/cache": vol}, secrets=secrets)
+def eval_remote(mode: str, model: str, ckpt: str | None, gstep: int | None, n: int, shots: int, threshold: float, sub_block: int | None, max_new: int, ar_batch: int, limit: int | None, max_hours: float | None) -> dict:
+    """GSM8K subset eval (ar | dllm) — the measurement side of the stop literal.
+
+    The results file (JSONL per problem, keyed by subset position) lives in
+    --results-dir=/cache/evals and is resumed by position, so a 500-problem dLLM decode
+    too long for one window is chunked with --limit across windows; the report only
+    scores what is present. dLLM mode loads the FSDP DCP checkpoint via gsm8k_eval's
+    resharding loader — no process group needed.
+    """
+    import subprocess
+
+    from dllm_qwen38 import gsm8k_eval as ev
+
+    d = _run_dir(f"eval-{mode}")
+    argv = [
+        "--mode", mode, "--model", model, "--n", str(n), "--shots", str(shots),
+        "--threshold", str(threshold), "--max-new", str(max_new), "--block", "32",
+        "--ar-batch", str(ar_batch), "--device", "cuda", "--out", d,
+        "--results-dir", "/cache/evals",
+    ]
+    if ckpt:
+        argv += ["--ckpt-dir", f"/cache/ckpts/{ckpt}"]
+    if gstep:
+        argv += ["--gstep", str(gstep)]
+    if sub_block:
+        argv += ["--sub-block", str(sub_block)]
+    if limit:
+        argv += ["--limit", str(limit)]
+    if max_hours:
+        argv += ["--max-hours", str(max_hours)]
+    t0 = time.time()
+    code = ev.main(argv)
+    rep = json.load(open(f"{d}/report.json")) if os.path.exists(f"{d}/report.json") else {}
+    rep.update({"exit": code, "wall_total_s": round(time.time() - t0, 1), "run_dir": d, "gpu": subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"], capture_output=True, text=True).stdout.strip()})
+    with open(f"{d}/report.json", "w") as f:
+        json.dump(rep, f, indent=1)
+    vol.commit()
+    return rep
+
+
+@app.local_entrypoint()
+def eval_run(mode: str, model: str = "Qwen/Qwen3.8-27B", ckpt: str = "", gstep: int = 0, n: int = 500, shots: int = 4, threshold: float = 0.9, sub_block: int = 0, max_new: int = 1024, ar_batch: int = 8, limit: int = 0, max_hours: float = 0.0):
+    rep = eval_remote.remote(mode, model, ckpt or None, gstep or None, n, shots, threshold, sub_block or None, max_new, ar_batch, limit or None, max_hours or None)
     print(json.dumps(rep, indent=1))
 
 
