@@ -172,15 +172,33 @@ def user_message(item, demos) -> str:
 
 
 def prompt_ids(tok, item, demos) -> list[int]:
-    ids = tok.apply_chat_template(
+    """Tokenized prompt as a flat list[int], whatever shape the tokenizer hands back.
+
+    transformers v5 flipped apply_chat_template to return a BatchEncoding (return_dict
+    became True), so the old `list(ids)` iterated the dict KEYS — the first AR run died
+    in run_ar_batch with ValueError("too many dimensions 'str'") exactly there. A
+    BatchEncoding is a UserDict, not a dict subclass, so .get (not isinstance) is the
+    duck test; and `int(t)` also takes the 0-dim tensor elements of an eager tensor.
+    """
+    out = tok.apply_chat_template(
         [{"role": "user", "content": user_message(item, demos)}],
         tokenize=True,
         add_generation_prompt=True,
         enable_thinking=False,
     )
-    if not isinstance(ids, list):
-        ids = list(ids)
-    return ids
+    if hasattr(out, "get"):
+        out = out.get("input_ids", out)
+    try:
+        first = out[0]  # `if out` would be ambiguous on a multi-element tensor
+    except (TypeError, IndexError):
+        first = None
+    is_row = isinstance(first, (list, tuple)) or (hasattr(first, "dim") and first.dim() > 0)
+    if is_row:
+        rows = len(out)
+        if rows != 1:
+            raise ValueError(f"apply_chat_template returned {rows} prompt rows for one conversation")
+        out = first
+    return [int(t) for t in out]
 
 
 # ------------------------------------------------------------ decode-path helpers
