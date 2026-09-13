@@ -18,6 +18,7 @@ from dllm_qwen38.gsm8k_eval import (
     fewshot_demos,
     gold_value,
     plain_fqn,
+    prompt_ids,
     restore_into,
     score,
     subset_fingerprint,
@@ -131,6 +132,48 @@ def test_blocks_for_minimal_capacity_and_boundaries():
     assert blocks_for(28, 32 * 5, 32) == 1  # max_new == room, aligned prompt
     assert blocks_for(33, 32 * 5, 32) == 2  # first value beyond the aligned room (29 still fits: room=32)
     assert blocks_for(1024, 1700, 32) == 33
+
+
+def test_prompt_ids_flattens_every_tokenizer_shape():
+    """The first AR run died in run_ar_batch with ValueError("too many dimensions 'str'"):
+    transformers v5 flipped apply_chat_template to return a BatchEncoding, so the old
+    list(ids) iterated the dict KEYS and torch.tensor received strings. prompt_ids must
+    normalize every shape to a flat list of ints — and a fake tok pins it without a model.
+    """
+    from collections import UserDict
+
+    item = {"question": "qq"}
+    expect = [11, 12, 13]
+
+    class _BatchEnc(UserDict):  # BatchEncoding subclasses UserDict, not dict
+        pass
+
+    class _Tok:
+        def __init__(self, ret):
+            self.ret = ret
+
+        def apply_chat_template(self, conv, tokenize=True, **kw):
+            assert kw.get("add_generation_prompt") is True
+            assert kw.get("enable_thinking") is False
+            assert conv == [{"role": "user", "content": user_message(item, [])}]
+            return self.ret
+
+    # v5's actual return: BatchEncoding with 1-D ids
+    assert prompt_ids(_Tok(_BatchEnc(input_ids=expect, attention_mask=[1, 1, 1])), item, []) == expect
+    # a single conversation may come back nested
+    assert prompt_ids(_Tok(_BatchEnc(input_ids=[expect], attention_mask=[[1, 1, 1]])), item, []) == expect
+    # a plain dict (no .input_ids attribute) must also flatten — same .get duck path
+    assert prompt_ids(_Tok({"input_ids": expect}), item, []) == expect
+    # the v4-era flat list still lands as ints
+    assert prompt_ids(_Tok(expect), item, []) == expect
+    # eager 2-D tensor: 1-D row elements are not list/tuple, so the .dim() duck test must catch them
+    import torch
+
+    assert prompt_ids(_Tok(torch.tensor([[31, 32, 33]])), item, []) == [31, 32, 33]
+    # one conversation in → one prompt row out; multi-row is a shape we don't understand
+    # — fail loudly rather than silently score the wrong (truncated) prompt
+    with pytest.raises(ValueError, match="2 prompt rows"):
+        prompt_ids(_Tok([[21], [22]]), item, [])
 
 
 def test_cut_at_eos_cuts_at_first():
