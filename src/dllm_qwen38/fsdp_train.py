@@ -370,6 +370,40 @@ def _latest_checkpoint(ckpt_dir: str) -> int | None:
     return max(ns) if ns else None
 
 
+_CKPT_FP_ON = False  # --ckpt-fingerprint: hash every shard of the model+optimizer state at save and load
+_SAVE_FP: dict = {}  # (gstep, rank) -> "model-fp optim-fp", written at save, read back at load
+
+
+def _fingerprint_state_dict(sd) -> str:
+    """SHA256 over the raw bytes of every tensor in a flat state-dict map (probe-only).
+
+    For the checkpoint-fidelity probe: hashes exactly what will be saved / was just
+    loaded — DTensor entries hash their local shard, plain entries hash the whole tensor
+    — so a one-ULP defect anywhere in the round-trip is caught exactly without gathering
+    full tensors across ranks. Per-rank hashes are comparable across the save and load of
+    one selftest because the shard each rank holds is deterministic given the same
+    build_and_shard. Hashes the load-time state on CPU: at 27B that is ~27 GiB of host
+    copies per fingerprint call, which is why this is opt-in (--ckpt-fingerprint) and the
+    0.8B selftest, not the training windows, pays for it.
+    """
+    import hashlib
+
+    h = hashlib.sha256()
+    for fqn in sorted(sd):
+        v = sd[fqn]
+        h.update(f"{fqn}\x1f".encode())
+        for k, t in (v.items() if isinstance(v, dict) else [("", v)]):
+            h.update(f"{k}\x1f".encode())
+            if torch.is_tensor(t):
+                u = (t.to_local() if isinstance(t, DTensor) else t).detach()
+                u = u.contiguous().cpu()
+                h.update(f"{tuple(u.shape)}\x1f{u.dtype}\x1f".encode())
+                h.update(u.flatten().view(torch.uint8).numpy().tobytes())
+            else:
+                h.update(repr(t).encode())
+    return h.hexdigest()[:16]
+
+
 def _save_checkpoint(ckpt_dir: str, gstep: int, root, opt, seq_tokens: int, rank: int) -> None:
     """DCP-sharded save: model + optimizer + (step, seq_tokens); atomic via tmp→rename.
 
@@ -388,6 +422,10 @@ def _save_checkpoint(ckpt_dir: str, gstep: int, root, opt, seq_tokens: int, rank
     """
     msd = get_model_state_dict(root)
     osd = get_optimizer_state_dict(root, opt)
+    if _CKPT_FP_ON:
+        fp = f"{_fingerprint_state_dict(msd)} {_fingerprint_state_dict(osd['state'])}"
+        _SAVE_FP[(gstep, rank)] = fp
+        print(f"CKPT-FP\tsave\trank {rank}\tgstep {gstep}\t{fp}", flush=True)
     dcp_save(
         {
             "model": msd,
@@ -430,6 +468,16 @@ def _load_checkpoint(ckpt_dir: str, gstep: int, root, opt) -> int:
     dcp_load({"model": msd, "optim": osd, **carry}, checkpoint_id=_ckpt_path(ckpt_dir, gstep))
     set_model_state_dict(root, msd)
     set_optimizer_state_dict(root, opt, optim_state_dict=osd)
+    if _CKPT_FP_ON:
+        rank = dist.get_rank()
+        fp = (f"{_fingerprint_state_dict(get_model_state_dict(root))} "
+              f"{_fingerprint_state_dict(get_optimizer_state_dict(root, opt)['state'])}")
+        print(f"CKPT-FP\tload\trank {rank}\tgstep {gstep}\t{fp}", flush=True)
+        prev = _SAVE_FP.get((gstep, rank))
+        if prev is not None:  # in-process selftest: same rank, same shard, hashes comparable
+            flag = torch.tensor([prev == fp], device="cuda")
+            dist.all_reduce(flag, op=dist.ReduceOp.MIN)
+            print(f"CKPT-FP-MATCH\tgstep {gstep}\trank {rank}\texact {bool(flag.item())}", flush=True)
     return int(carry["seq_tokens"].item())
 
 
@@ -650,7 +698,10 @@ def main(argv=None) -> int:
     p.add_argument("--ckpt-every", type=int, default=0, help="save every N global steps (0 = window end only)")
     p.add_argument("--resume", action="store_true", help="resume from the latest checkpoint in --ckpt-dir; --steps is THIS window's length")
     p.add_argument("--resume-selftest", action="store_true", help="uninterrupted window with a mid-run save, then a SAME-process cold rebuild + resume from the midpoint; the re-run's second-half losses must be bit-exact against the uninterrupted ones — isolates checkpoint fidelity (params+moments+data position+global step) from the cross-container kernel noise that makes separate Modal containers differ at ~1e-6 relative from step 1 (measured 2026-09-12: identical data fingerprints, H100x8 both, loss diff 3.6e-5 at step 1 amplified chaotically to ~2.4e-3 by step 60)")
+    p.add_argument("--ckpt-fingerprint", action="store_true", help="hash every shard of the model+optimizer state at save and at load (CKPT-FP lines; the in-process selftest also all-reduces a per-rank bit-exact match) — separates round-trip fidelity from the update-path noise the loss comparison cannot")
     a = p.parse_args(argv)
+    global _CKPT_FP_ON
+    _CKPT_FP_ON = a.ckpt_fingerprint
     if a.seq_len % a.block:
         print("COULD-NOT-MEASURE seq-len must be a multiple of block", file=sys.stderr)
         return 2

@@ -200,7 +200,7 @@ def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_l
     if resume:
         argv += ["--resume"]
     if selftest:
-        argv += ["--resume-selftest"]
+        argv += ["--resume-selftest", "--ckpt-fingerprint"]  # fingerprint probe: separates round-trip fidelity from update-path noise (2026-09-13)
     if ckpt and not resume:
         os.makedirs(f"/cache/ckpts/{ckpt}", exist_ok=True)
     stop = threading.Event()
