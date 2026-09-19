@@ -144,6 +144,45 @@ memory. Same 50-step shape as the loop smoke (batch 4 × 512 × 2 views, block 3
 checkpoint, `causal-conv1d` in the image (reference conv fallback is on every leg; candidate
 lever, nvcc build risk).
 
+## KV memory / serving levers (2026-09-19, RTX PRO 6000, single GPU, AR decode)
+
+Investigated whether "sqrt-space KV residency" (a claimed O(√S)-resident, exact-recompute KV
+cache technique — `com-junkawasaki/sqrt-space-kv-paper` on Hugging Face) helps serve
+`Qwen/Qwen3.8-27B` with longer context / higher concurrency on one GPU. Measured, not assumed:
+
+- Architecture: `config.layer_types` is 48/64 `linear_attention` (GDN, O(1) recurrent state,
+  does not grow with context) and 16/64 `full_attention` (O(S) KV — the only part any
+  KV-shrinking technique can touch on this model).
+- At the memory ceiling tested (ctx=32768, batch=4, bf16, weights 50.1 GiB), attention-layer KV
+  was only ~8 GiB of the ~87.7 GiB peak — the other ~29.6 GiB (grows with context) dominated,
+  most likely the `causal_conv1d` reference-kernel fallback noted above plus prefill activation
+  memory, not attention KV.
+- **Chunked prefill** (feed the prompt in 2048-token pieces through a real growing
+  `DynamicCache` instead of one `forward()` call over the whole prompt) cut peak memory ~20 GiB
+  (~24%) at **no decode-throughput cost**, and turned two OOM configs
+  (ctx=16384×batch=16, ctx=32768×batch=8) into working ones. This is the lever that paid off —
+  no new mechanism, just loop the existing prefill call.
+- **`DynamicCache(config=model.config, offloading=True)`** (transformers' built-in KV→CPU
+  paging — almost certainly the real mechanism behind "sqrt-space"-style claims elsewhere, not
+  a novel algorithm) does cut peak GPU memory further (11–18%) and unlocks larger batch/context,
+  but at **4–6x slower decode** (worse than the technique's own claimed 2–4x) **and wrong
+  logits** on this hybrid architecture: the first forward call (prefill) is bit-identical to
+  `offloading=False`, but the very next call that reuses the cache diverges immediately (max
+  abs logit diff 0.0 → 2.12, growing every subsequent step) — not bf16 noise, a real bug, filed
+  upstream as [huggingface/transformers#48947](https://github.com/huggingface/transformers/issues/48947).
+  **Do not use `offloading=True` for this model until that's fixed.**
+- A from-scratch exact-recompute cache (the literal "recompute evicted KV chunks" reading of
+  the technique) was analyzed but not built: for genuine global causal attention, an evicted
+  chunk cannot be discarded until every later chunk/query that needs it has been processed, so
+  exact O(√S)-resident memory necessarily costs O(S) recompute per new decode token on top of
+  the attention that's already O(S) — there is no construction that keeps both the O(√S)
+  memory bound and a flat, context-independent decode-time overhead for true full attention.
+  This is a derived result, not a measured one — flagging it so a future session does not
+  re-attempt the same build without first finding a hole in this argument.
+
+Net for serving this model on one GPU today: use chunked prefill; do not use KV offloading
+until the upstream bug is fixed; do not build a bespoke sqrt-space recompute cache.
+
 ## Objective, decoder, training loop (Phase 2 / 3 mechanics)
 
 - `objective.py` — complementary masking: one mask m per sequence (ratio t drawn per block), both
