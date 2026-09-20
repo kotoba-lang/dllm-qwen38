@@ -80,6 +80,8 @@ from torch.utils.checkpoint import checkpoint as _grad_checkpoint
 from .blockdiff import FULL, LINEAR, _rotary, complementary_mask
 from .gdn import gdn_mixer_forward, last_impl
 from .objective import complementary_step_inputs, mask_token_id
+from .precision import configure_tf32
+from .recovery import format_fingerprint_tsv, latest_atomic_dcp_checkpoint, resolve_n_steps
 from .train import chat_batches
 
 
@@ -405,6 +407,58 @@ def _fingerprint_state_dict(sd) -> str:
     return h.hexdigest()[:16]
 
 
+def _enroll_checkpoint_fingerprints(ckpt_dir: str, gstep: int, root, opt, rank: int) -> dict:
+    """Retrospectively fingerprint an already-atomic DCP checkpoint.
+
+    Every rank hashes the shards that were loaded from ``step-gstep``. Rank zero installs
+    the TSV atomically. An existing identical TSV makes this operation idempotent; an
+    existing different TSV is never overwritten since it is provenance evidence.
+    """
+    fingerprint = (
+        f"{_fingerprint_state_dict(get_model_state_dict(root))} "
+        f"{_fingerprint_state_dict(get_optimizer_state_dict(root, opt)['state'])}"
+    )
+    print(f"CKPT-FP\tenroll\trank {rank}\tgstep {gstep}\t{fingerprint}", flush=True)
+    fingerprints = [None] * dist.get_world_size()
+    dist.all_gather_object(fingerprints, fingerprint)
+
+    outcome = [None]
+    if rank == 0:
+        fp_dir = os.path.join(ckpt_dir, "fingerprints")
+        fp_file = os.path.join(fp_dir, f"step-{gstep}.tsv")
+        try:
+            expected = format_fingerprint_tsv(fingerprints)
+            os.makedirs(fp_dir, exist_ok=True)
+            if os.path.exists(fp_file):
+                with open(fp_file) as f:
+                    existing = f.read()
+                if existing != expected:
+                    raise RuntimeError(
+                        f"refusing to overwrite existing fingerprint evidence at {fp_file}"
+                    )
+                status = "already_present"
+            else:
+                tmp = f"{fp_file}.tmp-{os.getpid()}"
+                try:
+                    with open(tmp, "x") as f:
+                        f.write(expected)
+                        f.flush()
+                        os.fsync(f.fileno())
+                    os.replace(tmp, fp_file)
+                finally:
+                    if os.path.exists(tmp):
+                        os.unlink(tmp)
+                status = "created"
+            outcome[0] = {"status": status, "path": fp_file, "error": None}
+        except Exception as exc:  # broadcast the failure so no peer hangs at a collective
+            outcome[0] = {"status": "failed", "path": fp_file, "error": f"{type(exc).__name__}: {exc}"}
+    dist.broadcast_object_list(outcome, src=0)
+    if outcome[0]["error"]:
+        raise RuntimeError(outcome[0]["error"])
+    dist.barrier()
+    return outcome[0]
+
+
 def _save_checkpoint(ckpt_dir: str, gstep: int, root, opt, seq_tokens: int, rank: int, fingerprint: bool = True) -> None:
     """DCP-sharded save: model + optimizer + (step, seq_tokens); atomic via tmp→rename.
 
@@ -464,7 +518,7 @@ def _save_checkpoint(ckpt_dir: str, gstep: int, root, opt, seq_tokens: int, rank
     dist.barrier()
 
 
-def _load_checkpoint(ckpt_dir: str, gstep: int, root, opt) -> int:
+def _load_checkpoint(ckpt_dir: str, gstep: int, root, opt, *, verify_fingerprint: bool | None = None) -> int:
     """In-place load of the step-gstep checkpoint into root/opt. Returns cumulative seq_tokens.
 
     The fresh optimizer's empty state is materialized first by get_optimizer_state_dict —
@@ -482,7 +536,9 @@ def _load_checkpoint(ckpt_dir: str, gstep: int, root, opt) -> int:
     set_model_state_dict(root, msd)
     set_optimizer_state_dict(root, opt, optim_state_dict=osd)
     global _LOAD_FP_BAD
-    if _CKPT_FP_ON:
+    _LOAD_FP_BAD = False
+    verify = _CKPT_FP_ON if verify_fingerprint is None else verify_fingerprint
+    if verify:
         # verify the restore against the fingerprints written at save: same process or a
         # fresh container, the check is the same — read step-<g>.tsv, hash the loaded state,
         # compare per rank. Any rank mismatching (or the file missing — fail closed: an
@@ -510,8 +566,10 @@ def _load_checkpoint(ckpt_dir: str, gstep: int, root, opt) -> int:
                 print(f"CKPT-FP\tnoverify\t{fp_file} missing — checkpoint predates fingerprinted saves", flush=True)
             else:
                 print(f"CKPT-FP\tnoverify\t{fp_file} present but no parseable line for rank {rank}", flush=True)
-        flag = torch.tensor([bad], device="cuda")
-        dist.all_reduce(flag, op=dist.ReduceOp.MIN)
+        flag = torch.tensor([int(bad)], dtype=torch.int32, device="cuda")
+        # ``bad`` is true on failure, so MAX implements "any rank failed". MIN would
+        # incorrectly accept a checkpoint when only one rank happened to match.
+        dist.all_reduce(flag, op=dist.ReduceOp.MAX)
         _LOAD_FP_BAD = bool(flag.item())
         print(f"CKPT-FP-MATCH\tgstep {gstep}\trank {rank}\tmatch {not bad}\tall_ranks_ok {not _LOAD_FP_BAD}", flush=True)
     return int(carry["seq_tokens"].item())
@@ -561,6 +619,7 @@ def train_fsdp(
     mem_history: bool = False,
     fingerprint_saves: str = "window_end",  # "window_end": only the last step's save pays the fingerprint hash; "all": cadence saves too (selftest)
     grad_clip: float = 1.0,
+    warmup_steps: int = 0,
     log_every: int = 10,
     log=print,
 ) -> dict:
@@ -580,8 +639,13 @@ def train_fsdp(
     root = _Root(text_model, lm_head)  # checkpoint FQNs; a wrapper, not a copy — same modules
     first, last = start_step + 1, start_step + n_steps
 
+    if not 0 <= warmup_steps < n_steps:
+        raise ValueError(f"warmup_steps must be in [0, n_steps), got {warmup_steps} for {n_steps} steps")
+
     local = None
     losses, seq_tokens_win, t0, skipped = [], 0, time.time(), 0
+    measured_t0 = None
+    measured_seq_tokens = 0
     torch.cuda.reset_peak_memory_stats()
     text_model.train()
     if mem_history and rank == 0:
@@ -626,6 +690,10 @@ def train_fsdp(
             n_global = int(n_all.item())
             if n_global == 0:
                 skipped += 1
+                if warmup_steps and local_step == warmup_steps:
+                    torch.cuda.synchronize()
+                    dist.barrier()
+                    measured_t0 = time.perf_counter()
                 continue
             loss = ce_sum / n_global  # this rank's contribution to the global mean CE
             opt.zero_grad(set_to_none=True)
@@ -641,7 +709,17 @@ def train_fsdp(
             dist.all_reduce(ce_all)
             losses.append(float(ce_all) / n_global)
             # same accounting as train.py: unique sequence tokens (batch × L), not the doubled view rows
-            seq_tokens_win += x0_r.numel() * world
+            step_seq_tokens = x0_r.numel() * world
+            seq_tokens_win += step_seq_tokens
+            if local_step > warmup_steps:
+                measured_seq_tokens += step_seq_tokens
+            if warmup_steps and local_step == warmup_steps:
+                # The first step includes FSDP lazy init, allocator growth, and kernel warmup.
+                # Synchronize every rank at the registered boundary so the experiment metric
+                # covers only the following steady-state steps.
+                torch.cuda.synchronize()
+                dist.barrier()
+                measured_t0 = time.perf_counter()
         except torch.OutOfMemoryError:
             if mem_history and rank == 0:
                 # torchrun tears the pool down ~85ms after the FIRST rank to exit (measured on
@@ -663,7 +741,11 @@ def train_fsdp(
         if rank == 0 and (local_step % log_every == 0 or local_step == n_steps):
             el = time.time() - t0
             log(f"step {gstep}\tloss {losses[-1]:.4f}\ttargets {n_global}\tseq-tok/s {seq_tokens_win / el:.0f}\telapsed {el:.0f}s")
+    if warmup_steps:
+        torch.cuda.synchronize()
+        dist.barrier()
     el = time.time() - t0
+    measured_seconds = (time.perf_counter() - measured_t0) if measured_t0 is not None else el
     # weight-divergence probe over the replicated params only — the machinery this file adds
     # by hand. Sharded params are skipped on purpose: rank r holds only shard r, so per-rank
     # checksums differ by design and comparing them false-positives on a perfectly-synced run
@@ -705,6 +787,11 @@ def train_fsdp(
         "seq_tokens": seq_tokens_start + seq_tokens_win,  # cumulative across chained windows
         "seq_tokens_window": seq_tokens_win,
         "seq_tokens_per_s": seq_tokens_win / el if el else 0.0,
+        "warmup_steps": warmup_steps,
+        "measured_steps": n_steps - warmup_steps,
+        "measured_seq_tokens": measured_seq_tokens if warmup_steps else seq_tokens_win,
+        "measured_seconds": measured_seconds,
+        "measured_seq_tokens_per_s": (measured_seq_tokens if warmup_steps else seq_tokens_win) / measured_seconds if measured_seconds else 0.0,
         "seconds": el,
         "peak_mem_gib": round(peak.item() / 2**30, 2),
         "checkpointing": checkpointing,
@@ -730,26 +817,52 @@ def main(argv=None) -> int:
     p.add_argument("--grad-checkpoint", action="store_true")
     p.add_argument("--mem-history", action="store_true", help="record alloc stacks (MEMHIST dump at OOM) + MEMCENSUS per-unit gather census")
     p.add_argument("--gdn", default="torch", choices=["auto", "torch", "fla"])
+    p.add_argument("--tf32", action="store_true", help="use TF32 Tensor Cores for float32 matmuls (default: off/highest precision baseline)")
+    p.add_argument("--warmup-steps", type=int, default=0, help="exclude this many initial steps from measured_* throughput fields")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", default=None, help="directory for report.json (rank 0)")
     p.add_argument("--ckpt-dir", default=None, help="checkpoint directory on the persistent volume; enables window-end saves (--ckpt-every for mid-window cadence)")
     p.add_argument("--ckpt-every", type=int, default=0, help="save every N global steps (0 = window end only)")
     p.add_argument("--resume", action="store_true", help="resume from the latest checkpoint in --ckpt-dir; --steps is THIS window's length")
+    p.add_argument("--target-step", type=int, default=None, help="absolute final global step; this invocation trains max(0, target-step minus resumed checkpoint step), overriding --steps")
+    p.add_argument("--enroll-latest-fingerprint", action="store_true", help="train zero steps: load the latest completed atomic DCP checkpoint, atomically add its missing per-rank fingerprint TSV, then reload and verify every rank")
     p.add_argument("--resume-selftest", action="store_true", help="uninterrupted window with a mid-run save, then a SAME-process cold rebuild + resume from the midpoint; the gate (re-specified 2026-09-13, owner-approved) requires the save→load round-trip proven bit-exact on every rank (SHA256 fingerprints written to the ckpt dir and verified at load), seq_tokens continuity, and the resumed trajectory inside the pre-registered ambient band (band 5e-3; measured fresh-vs-fresh maxima 2.0-2.4e-3 from update-path atomics alone — per-run bit-identical losses are unachievable, SDPA-backward atomics, so loss diff no longer measures checkpoint fidelity)")
-    p.add_argument("--ckpt-fingerprint", action="store_true", help="hash every shard of the model+optimizer state at save (CKPT-FP save lines, written to ckpt_dir/fingerprints/step-<g>.tsv) and verify the restore against them at load (CKPT-FP load lines; any rank mismatching or the file missing → fail closed, all-reduced to a global bad flag; a --resume window exits 1 before training on an unverified restore). Auto-on for --resume/--resume-selftest; mid-window cadence saves skip the hash unless --resume-selftest (fingerprint_saves=all)")
+    p.add_argument("--ckpt-fingerprint", action="store_true", help="hash every shard of the model+optimizer state at save (CKPT-FP save lines, written to ckpt_dir/fingerprints/step-<g>.tsv) and verify the restore against them at load (CKPT-FP load lines; any rank mismatching or the file missing → fail closed, all-reduced to a global bad flag; a --resume window exits 1 before training on an unverified restore). Auto-on for --resume/--resume-selftest; resume cadence saves are fingerprinted so a retried window can safely continue from the latest checkpoint")
     a = p.parse_args(argv)
     global _CKPT_FP_ON
-    _CKPT_FP_ON = a.ckpt_fingerprint or a.resume or a.resume_selftest  # resume windows verify their restore (mismatch → exit 1)
+    _CKPT_FP_ON = a.ckpt_fingerprint or a.resume or a.resume_selftest or a.enroll_latest_fingerprint  # resume windows verify their restore (mismatch → exit 1)
     if a.seq_len % a.block:
         print("COULD-NOT-MEASURE seq-len must be a multiple of block", file=sys.stderr)
         return 2
     if a.resume_selftest and not a.ckpt_dir:
         print("COULD-NOT-MEASURE --resume-selftest needs --ckpt-dir (it saves the midpoint it resumes from)", file=sys.stderr)
         return 2
+    if a.enroll_latest_fingerprint and not a.ckpt_dir:
+        print("COULD-NOT-MEASURE --enroll-latest-fingerprint needs --ckpt-dir", file=sys.stderr)
+        return 2
+    if a.enroll_latest_fingerprint and (a.resume or a.resume_selftest or a.target_step is not None):
+        print("COULD-NOT-MEASURE --enroll-latest-fingerprint is a zero-training standalone mode", file=sys.stderr)
+        return 2
+    if a.target_step is not None and a.target_step < 0:
+        print("COULD-NOT-MEASURE --target-step must be non-negative", file=sys.stderr)
+        return 2
+    if a.target_step is not None and a.resume_selftest:
+        print("COULD-NOT-MEASURE --target-step cannot be combined with --resume-selftest", file=sys.stderr)
+        return 2
+    if a.warmup_steps < 0:
+        print("COULD-NOT-MEASURE --warmup-steps must be non-negative", file=sys.stderr)
+        return 2
 
     dist.init_process_group("nccl")
     rank = dist.get_rank()
     torch.cuda.set_device(int(os.environ.get("LOCAL_RANK", 0)))
+    tf32 = configure_tf32(torch, a.tf32)
+    if rank == 0:
+        print(
+            f"TF32\tenabled {tf32['enabled']}\tfloat32_matmul_precision {tf32['float32_matmul_precision']}"
+            f"\tcuda_matmul_allow_tf32 {tf32['cuda_matmul_allow_tf32']}",
+            flush=True,
+        )
 
     from .equivalence import load_checkpoint
     from transformers import AutoTokenizer
@@ -778,6 +891,62 @@ def main(argv=None) -> int:
         pp.requires_grad_(True)
     opt = torch.optim.AdamW(uniq, lr=a.lr, betas=(0.9, 0.95), weight_decay=0.0, foreach=False)
 
+    if a.enroll_latest_fingerprint:
+        if dist.get_world_size() != 8:
+            if rank == 0:
+                print(
+                    "COULD-NOT-MEASURE retrospective enrollment for this production checkpoint requires exactly 8 ranks",
+                    file=sys.stderr,
+                )
+            dist.destroy_process_group()
+            return 2
+        latest = latest_atomic_dcp_checkpoint(a.ckpt_dir)
+        if latest is None:
+            if rank == 0:
+                print(f"COULD-NOT-MEASURE no completed checkpoint in {a.ckpt_dir}", file=sys.stderr)
+            dist.destroy_process_group()
+            return 2
+        root = _Root(text_model, lm_head)
+        # The first load intentionally bypasses verification: this mode exists precisely for
+        # an atomic cadence checkpoint whose save predated a TSV. It does not bypass DCP's own
+        # load validation and it performs no optimizer step.
+        seq_tokens = _load_checkpoint(
+            a.ckpt_dir, latest, root, opt, verify_fingerprint=False
+        )
+        enrollment = _enroll_checkpoint_fingerprints(a.ckpt_dir, latest, root, opt, rank)
+        # Read the DCP checkpoint a second time and exercise the normal fail-closed verifier.
+        verified_seq_tokens = _load_checkpoint(
+            a.ckpt_dir, latest, root, opt, verify_fingerprint=True
+        )
+        verified = not _LOAD_FP_BAD and verified_seq_tokens == seq_tokens
+        rep = {
+            "mode": "retrospective_fingerprint_enrollment",
+            "retrospective_enrollment": True,
+            "trained_steps": 0,
+            "checkpoint_step": latest,
+            "seq_tokens": seq_tokens,
+            "verified_seq_tokens": verified_seq_tokens,
+            "verified_all_ranks": verified,
+            "fingerprint_status": enrollment["status"],
+            "fingerprint_file": enrollment["path"],
+            "model": a.model,
+            "ckpt_dir": a.ckpt_dir,
+            "world": dist.get_world_size(),
+        }
+        if rank == 0:
+            print(
+                f"CKPT-FP-ENROLL\tstep {latest}\tstatus {enrollment['status']}"
+                f"\tverified_all_ranks {verified}\ttrained_steps 0",
+                flush=True,
+            )
+            print("REPORT\t" + json.dumps(rep, default=str))
+            if a.out:
+                os.makedirs(a.out, exist_ok=True)
+                with open(os.path.join(a.out, "report.json"), "w") as f:
+                    json.dump(rep, f, indent=1, default=str)
+        dist.destroy_process_group()
+        return 0 if verified else 1
+
     start_step, seq_tokens_start = 0, 0
     if a.resume:
         if not a.ckpt_dir:
@@ -800,6 +969,39 @@ def main(argv=None) -> int:
         if rank == 0:
             print(f"RESUME\tfrom step {start_step}\tseq_tokens {seq_tokens_start}", flush=True)
 
+    try:
+        n_steps = resolve_n_steps(start_step, a.steps, a.target_step)
+    except ValueError as exc:
+        if rank == 0:
+            print(f"COULD-NOT-MEASURE {exc}", file=sys.stderr)
+        dist.destroy_process_group()
+        return 2
+    if n_steps and not 0 <= a.warmup_steps < n_steps:
+        if rank == 0:
+            print("COULD-NOT-MEASURE --warmup-steps must be in [0, invocation steps)", file=sys.stderr)
+        dist.destroy_process_group()
+        return 2
+    if n_steps == 0:
+        rep = {
+            "mode": "target_step_noop",
+            "trained_steps": 0,
+            "start_step": start_step,
+            "target_step": a.target_step,
+            "seq_tokens": seq_tokens_start,
+            "resume": a.resume,
+            "model": a.model,
+            "ckpt_dir": a.ckpt_dir,
+        }
+        if rank == 0:
+            print(f"TARGET-STEP\talready at {start_step}\ttrained_steps 0", flush=True)
+            print("REPORT\t" + json.dumps(rep, default=str))
+            if a.out:
+                os.makedirs(a.out, exist_ok=True)
+                with open(os.path.join(a.out, "report.json"), "w") as f:
+                    json.dump(rep, f, indent=1, default=str)
+        dist.destroy_process_group()
+        return 0
+
     batches = chat_batches(a.data, a.split, tok, a.batch, a.seq_len, a.block, a.seed)
     if start_step:
         # replay the batch stream exactly: chat_batches cycles with per-pass seeded shuffles,
@@ -812,12 +1014,16 @@ def main(argv=None) -> int:
 
     rep = train_fsdp(
         text_model, lm_head, steps, batches, opt=opt, uniq=uniq, uniq_names=uniq_names,
-        block=a.block, mask_id=mask_id, n_steps=a.steps, start_step=start_step, seq_tokens_start=seq_tokens_start,
-        ckpt_dir=a.ckpt_dir, ckpt_every=(a.steps // 2) if a.resume_selftest else a.ckpt_every,
+        block=a.block, mask_id=mask_id, n_steps=n_steps, start_step=start_step, seq_tokens_start=seq_tokens_start,
+        ckpt_dir=a.ckpt_dir, ckpt_every=(n_steps // 2) if a.resume_selftest else a.ckpt_every,
         checkpointing=a.grad_checkpoint, mem_history=a.mem_history,
-        fingerprint_saves="all" if a.resume_selftest else "window_end",
+        warmup_steps=a.warmup_steps,
+        # A persistent Modal call can still be preempted.  Fingerprint every
+        # cadence save on resumed production windows so a retry can safely
+        # continue from the newest atomic checkpoint instead of failing closed.
+        fingerprint_saves="all" if (a.resume or a.resume_selftest) else "window_end",
     )
-    rep.update({"model": a.model, "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "layers": a.layers, "ckpt_dir": a.ckpt_dir, "ckpt_every": a.ckpt_every, "resume": a.resume})
+    rep.update({"model": a.model, "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "layers": a.layers, "ckpt_dir": a.ckpt_dir, "ckpt_every": a.ckpt_every, "resume": a.resume, "target_step": a.target_step, "tf32": tf32})
 
     if a.resume_selftest:
         # the fidelity gate (re-specified 2026-09-13, owner-approved after measurement):
@@ -857,6 +1063,7 @@ def main(argv=None) -> int:
             text_model, lm_head, steps, batches, opt=opt, uniq=uniq, uniq_names=uniq_names,
             block=a.block, mask_id=mask_id, n_steps=a.steps - mid, start_step=mid, seq_tokens_start=seq_tokens_start,
             ckpt_dir=None, ckpt_every=0, checkpointing=a.grad_checkpoint, mem_history=False,
+            warmup_steps=0,
         )
         ref, got = rep["losses"][mid:], rep2["losses"]
         diffs = [abs(x - y) for x, y in zip(ref, got)] if len(ref) == len(got) else None

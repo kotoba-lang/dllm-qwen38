@@ -164,7 +164,7 @@ def lever_bench_remote(model: str, data: str, split: str, steps: int, batch: int
 
 
 @app.function(image=image, gpu="H100:8", timeout=8 * 3600, volumes={"/cache": vol}, secrets=secrets)
-def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_len: int, block: int, lr: float, layers: int | None, nproc: int, grad_checkpoint: bool, mem_history: bool, ckpt: str = "", ckpt_every: int = 0, resume: bool = False, selftest: bool = False) -> dict:
+def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_len: int, block: int, lr: float, layers: int | None, nproc: int, grad_checkpoint: bool, mem_history: bool, ckpt: str = "", ckpt_every: int = 0, resume: bool = False, selftest: bool = False, tf32: bool = False, target_step: int = -1, enroll_latest_fingerprint: bool = False) -> dict:
     """FSDP training across the container's GPUs via torchrun (fsdp_train.py --module).
 
     batch is the GLOBAL rows per step; each rank takes batch/nproc rows and the complementary
@@ -195,6 +195,12 @@ def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_l
         argv += ["--grad-checkpoint"]
     if mem_history:
         argv += ["--mem-history"]
+    if tf32:
+        argv += ["--tf32"]
+    if target_step >= 0:
+        argv += ["--target-step", str(target_step)]
+    if enroll_latest_fingerprint:
+        argv += ["--enroll-latest-fingerprint"]
     if ckpt:
         argv += ["--ckpt-dir", f"/cache/ckpts/{ckpt}"]
     if ckpt_every:
@@ -236,6 +242,9 @@ def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_l
         "ckpt": ckpt,
         "ckpt_every": ckpt_every,
         "resume": resume,
+        "tf32_requested": tf32,
+        "target_step": target_step if target_step >= 0 else None,
+        "enroll_latest_fingerprint": enroll_latest_fingerprint,
         "gpu": subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"], capture_output=True, text=True).stdout.strip().replace("\n", " | "),
     })
     if ckpt:
@@ -247,8 +256,8 @@ def fsdp_remote(model: str, data: str, split: str, steps: int, batch: int, seq_l
 
 
 @app.local_entrypoint()
-def fsdp_run(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/Llama-Nemotron-Post-Training-Dataset", split: str = "chat", steps: int = 100, batch: int = 8, seq_len: int = 512, block: int = 32, lr: float = 1e-5, layers: int = 0, nproc: int = 8, grad_checkpoint: bool = False, mem_history: bool = False, ckpt: str = "", ckpt_every: int = 0, resume: bool = False, selftest: bool = False):
-    rep = fsdp_remote.remote(model, data, split, steps, batch, seq_len, block, lr, layers or None, nproc, grad_checkpoint, mem_history, ckpt, ckpt_every, resume, selftest)
+def fsdp_run(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/Llama-Nemotron-Post-Training-Dataset", split: str = "chat", steps: int = 100, batch: int = 8, seq_len: int = 512, block: int = 32, lr: float = 1e-5, layers: int = 0, nproc: int = 8, grad_checkpoint: bool = False, mem_history: bool = False, ckpt: str = "", ckpt_every: int = 0, resume: bool = False, selftest: bool = False, tf32: bool = False, target_step: int = -1, enroll_latest_fingerprint: bool = False):
+    rep = fsdp_remote.remote(model, data, split, steps, batch, seq_len, block, lr, layers or None, nproc, grad_checkpoint, mem_history, ckpt, ckpt_every, resume, selftest, tf32, target_step, enroll_latest_fingerprint)
     print(json.dumps(rep, indent=1))
 
 
