@@ -262,7 +262,7 @@ def fsdp_run(model: str = "Qwen/Qwen3.5-0.8B", data: str = "nvidia/Llama-Nemotro
 
 
 @app.function(image=image, gpu="H100", timeout=16 * 3600, volumes={"/cache": vol}, secrets=secrets)
-def eval_remote(mode: str, model: str, ckpt: str | None, gstep: int | None, n: int, shots: int, threshold: float, sub_block: int | None, max_new: int, ar_batch: int, limit: int | None, max_hours: float | None) -> dict:
+def eval_remote(mode: str, model: str, ckpt: str | None, gstep: int | None, n: int, shots: int, threshold: float, sub_block: int | None, max_new: int, ar_batch: int, limit: int | None, max_hours: float | None, expected_fingerprint: str = "") -> dict:
     """GSM8K subset eval (ar | dllm) — the measurement side of the stop literal.
 
     The results file (JSONL per problem, keyed by subset position) lives in
@@ -292,6 +292,8 @@ def eval_remote(mode: str, model: str, ckpt: str | None, gstep: int | None, n: i
         argv += ["--limit", str(limit)]
     if max_hours:
         argv += ["--max-hours", str(max_hours)]
+    if expected_fingerprint:
+        argv += ["--expected-fingerprint", expected_fingerprint]
     t0 = time.time()
     code = ev.main(argv)
     rep = json.load(open(f"{d}/report.json")) if os.path.exists(f"{d}/report.json") else {}
@@ -303,8 +305,8 @@ def eval_remote(mode: str, model: str, ckpt: str | None, gstep: int | None, n: i
 
 
 @app.local_entrypoint()
-def eval_run(mode: str, model: str = "Qwen/Qwen3.8-27B", ckpt: str = "", gstep: int = 0, n: int = 500, shots: int = 4, threshold: float = 0.9, sub_block: int = 0, max_new: int = 1024, ar_batch: int = 8, limit: int = 0, max_hours: float = 0.0):
-    rep = eval_remote.remote(mode, model, ckpt or None, gstep or None, n, shots, threshold, sub_block or None, max_new, ar_batch, limit or None, max_hours or None)
+def eval_run(mode: str, model: str = "Qwen/Qwen3.8-27B", ckpt: str = "", gstep: int = 0, n: int = 500, shots: int = 4, threshold: float = 0.9, sub_block: int = 0, max_new: int = 1024, ar_batch: int = 8, limit: int = 0, max_hours: float = 0.0, expected_fingerprint: str = ""):
+    rep = eval_remote.remote(mode, model, ckpt or None, gstep or None, n, shots, threshold, sub_block or None, max_new, ar_batch, limit or None, max_hours or None, expected_fingerprint)
     print(json.dumps(rep, indent=1))
 
 

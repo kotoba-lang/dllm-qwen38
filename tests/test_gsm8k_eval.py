@@ -14,9 +14,11 @@ from dllm_qwen38.gsm8k_eval import (
     blocks_for,
     cut_at_eos,
     extract_pred,
+    eval_identity,
     fewshot_block,
     fewshot_demos,
     gold_value,
+    inference_metrics,
     plain_fqn,
     prompt_ids,
     restore_into,
@@ -51,7 +53,22 @@ def test_score_both_directions_and_trace_cannot_score():
     a = accuracy([(True, "####"), (False, "####"), (None, "none")])
     assert a["acc"] == 0.5 and a["n"] == 2 and a["skipped"] == 1
     assert a["by_method"] == {"####": 2}
-    assert accuracy([]) == {"acc": None, "n": 0, "skipped": 0, "by_method": {}}
+    assert accuracy([]) == {"acc": None, "correct": 0, "n": 0, "skipped": 0, "by_method": {}}
+
+
+def test_eval_identity_and_inference_metrics_are_checkpoint_specific():
+    a = {"mode": "dllm", "gstep": 8000, "threshold": 0.918}
+    assert eval_identity(a) == eval_identity(dict(reversed(list(a.items()))))
+    assert eval_identity(a) != eval_identity({**a, "gstep": 32000})
+    m = inference_metrics([
+        {"wall_s": 1.0, "prompt_len": 100, "generated_tokens": 10, "latency_kind": "item"},
+        {"wall_s": 3.0, "prompt_len": 200, "generated_tokens": 30, "latency_kind": "item"},
+    ])
+    assert m["measured_items"] == 2 and m["inference_wall_s"] == 4.0
+    assert m["items_per_s"] == 0.5 and m["prompt_tokens_per_s"] == 75.0
+    assert m["generated_tokens_per_s"] == 10.0
+    assert m["latency_median_s"] == 2.0 and m["latency_p95_s"] == 3.0
+    assert m["latency_semantics"] == "exact per-item"
 
 
 def test_extract_pred_edges():

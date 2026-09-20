@@ -41,9 +41,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import random
 import re
+import statistics
 import time
 from decimal import Decimal, InvalidOperation
 
@@ -146,7 +148,41 @@ def accuracy(results: list) -> dict:
         if ok is None:
             continue
         by_method[method] = by_method.get(method, 0) + 1
-    return {"acc": round(n_ok / n_scored, 4) if n_scored else None, "n": n_scored, "skipped": skipped, "by_method": by_method}
+    return {"acc": round(n_ok / n_scored, 4) if n_scored else None, "correct": n_ok, "n": n_scored, "skipped": skipped, "by_method": by_method}
+
+
+def eval_identity(config: dict) -> str:
+    """Short stable identity for the exact checkpoint and decode configuration."""
+    payload = json.dumps(config, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
+
+
+def inference_metrics(results: list[dict]) -> dict:
+    """Aggregate only directly measured per-item inference fields.
+
+    AR batch latency is stored as amortized wall time per item; dLLM latency is exact
+    item wall time.  Summing either representation recovers measured generation wall
+    time without mixing model-load and dataset startup into token throughput.
+    """
+    rows = [r for r in results if isinstance(r.get("wall_s"), (int, float))]
+    walls = [float(r["wall_s"]) for r in rows]
+    total = sum(walls)
+    prompt = sum(int(r.get("prompt_len") or 0) for r in rows)
+    generated = sum(int(r.get("generated_tokens") or 0) for r in rows)
+    ordered = sorted(walls)
+    p95 = ordered[max(0, math.ceil(0.95 * len(ordered)) - 1)] if ordered else None
+    return {
+        "measured_items": len(rows),
+        "inference_wall_s": round(total, 3),
+        "items_per_s": len(rows) / total if total else None,
+        "prompt_tokens": prompt,
+        "generated_tokens": generated,
+        "prompt_tokens_per_s": prompt / total if total else None,
+        "generated_tokens_per_s": generated / total if total else None,
+        "latency_median_s": statistics.median(walls) if walls else None,
+        "latency_p95_s": p95,
+        "latency_semantics": "exact per-item" if rows and all(r.get("latency_kind") == "item" for r in rows) else "amortized per-item for batched rows",
+    }
 
 
 # ---------------------------------------------------------------- prompts
@@ -331,7 +367,7 @@ def restore_into(text_model, lm_head, tensors: dict, ctx: str = "ckpt") -> None:
 # ---------------------------------------------------------------- runners
 
 
-def run_ar_batch(m, tok, ids_list: list[list[int]], max_new: int, device: str) -> list[str]:
+def run_ar_batch(m, tok, ids_list: list[list[int]], max_new: int, device: str) -> list[tuple[str, int]]:
     """Greedy AR batch, left-padded. Attention masks are built from lengths (never sniffed
     from token values — prompt tokens include <|im_end|> and pad_token_id collides with
     <|endoftext|>, so value-based masks are a trap)."""
@@ -349,9 +385,10 @@ def run_ar_batch(m, tok, ids_list: list[list[int]], max_new: int, device: str) -
         do_sample=False, num_beams=1, pad_token_id=pad,
     )
     texts = []
+    eos_ids = {int(x) for x in ([tok.eos_token_id] if isinstance(tok.eos_token_id, int) else (tok.eos_token_id or []))}
     for i, ids in enumerate(ids_list):
-        gen = out[i, input_ids.shape[1]:]
-        texts.append(tok.decode(gen, skip_special_tokens=True))
+        gen = cut_at_eos([int(x) for x in out[i, input_ids.shape[1]:]], eos_ids)
+        texts.append((tok.decode(gen, skip_special_tokens=True), len(gen)))
     return texts
 
 
@@ -369,7 +406,7 @@ def run_one_dllm(text_model, lm_head, tok, ids: list[int], *, block: int, thresh
     )
     gen = cut_at_eos(tr.tokens[len(ids):], {eos_id} if eos_id else set())
     text = tok.decode(gen, skip_special_tokens=True)
-    meta = {"forwards": tr.forwards, "generated": tr.generated, "n_blocks": nb, "steps_per_block": tr.steps_per_block, "wall_s": round(_t.time() - t0, 1)}
+    meta = {"forwards": tr.forwards, "generated": tr.generated, "generated_tokens": len(gen), "n_blocks": nb, "steps_per_block": tr.steps_per_block, "wall_s": round(_t.time() - t0, 1)}
     return text, meta
 
 
@@ -400,6 +437,7 @@ def main(argv=None) -> int:
     p.add_argument("--report-every", type=int, default=20)
     p.add_argument("--device", default="cuda")
     p.add_argument("--results-dir", default=None, help="stable per-mode results JSONL (default: --out); Modal passes /cache/evals so reruns resume")
+    p.add_argument("--expected-fingerprint", default=None, help="fail closed unless the fixed subset/demo fingerprint matches")
     p.add_argument("--out", default=".")
     args = p.parse_args(argv)
 
@@ -417,8 +455,28 @@ def main(argv=None) -> int:
     demos = fewshot_demos(train_rows, args.shots)
     items = subset_rows(test_rows, args.n)
     fp = subset_fingerprint(items, demos)
+    if args.expected_fingerprint and fp != args.expected_fingerprint:
+        raise SystemExit(f"subset fingerprint {fp} != expected {args.expected_fingerprint}")
 
-    results_path = os.path.join(results_dir, f"{args.mode}-n{args.n}-fp{fp}.jsonl")
+    resolved_gstep = None
+    if args.mode == "dllm":
+        if not args.ckpt_dir:
+            raise SystemExit("--mode dllm needs --ckpt-dir")
+        resolved_gstep = args.gstep if args.gstep is not None else latest_gstep(args.ckpt_dir)
+        if resolved_gstep is None:
+            raise SystemExit(f"no step-* checkpoint in {args.ckpt_dir}")
+
+    identity_config = {
+        "mode": args.mode, "model": args.model, "n": args.n, "shots": args.shots,
+        "subset_fingerprint": fp, "ckpt_dir": args.ckpt_dir, "gstep": resolved_gstep,
+        "threshold": args.threshold, "sub_block": args.sub_block, "max_new": args.max_new,
+        "block": args.block, "ar_batch": args.ar_batch,
+    }
+    run_identity = eval_identity(identity_config)
+
+    # Including checkpoint and decode configuration prevents an older checkpoint's rows
+    # from being silently reused by a later interim or final evaluation.
+    results_path = os.path.join(results_dir, f"{args.mode}-n{args.n}-fp{fp}-cfg{run_identity}.jsonl")
     done: dict[int, dict] = {}
     if os.path.exists(results_path):
         with open(results_path) as f:
@@ -435,7 +493,8 @@ def main(argv=None) -> int:
 
     rep = {
         "mode": args.mode, "model": args.model, "n_subset": len(items), "shots": args.shots,
-        "subset_fingerprint": fp, "results_file": results_path,
+        "subset_fingerprint": fp, "run_identity": run_identity, "identity_config": identity_config,
+        "results_file": results_path,
         "done_before": len(done), "to_run": len(pending),
         "params": {k: getattr(args, k) for k in ("threshold", "sub_block", "max_new", "block", "ar_batch", "limit", "max_hours")},
     }
@@ -454,24 +513,22 @@ def main(argv=None) -> int:
                     break
                 ids_list = [prompt_ids(tok, it, demos) for _, it in chunk]
                 tb = time.time()
-                texts = run_ar_batch(m, tok, ids_list, args.max_new, args.device)
+                decoded = run_ar_batch(m, tok, ids_list, args.max_new, args.device)
                 wall = (time.time() - tb) / len(chunk)
-                for (idx, it), ids, text in zip(chunk, ids_list, texts):
+                for (idx, it), ids, (text, generated_tokens) in zip(chunk, ids_list, decoded):
                     ok, pred, method = score(text, it["answer"])
-                    r = {"idx": idx, "question": it["question"], "prompt_len": len(ids), "pred": pred, "method": method, "ok": ok, "wall_s": round(wall, 2), "max_new": args.max_new}
+                    r = {"idx": idx, "question": it["question"], "prompt_len": len(ids), "generated_tokens": generated_tokens, "pred": pred, "method": method, "ok": ok, "wall_s": round(wall, 4), "latency_kind": "batch_amortized", "output_sha256": hashlib.sha256(text.encode()).hexdigest(), "max_new": args.max_new}
                     _append_result(results_path, r)
                     done[idx] = r
                 if (b0 // bs) % 5 == 0 or b0 + bs >= len(pending):
                     _print_progress("AR", done, items, t0)
     else:
-        if not args.ckpt_dir:
-            raise SystemExit("--mode dllm needs --ckpt-dir")
-        gstep = args.gstep if args.gstep is not None else latest_gstep(args.ckpt_dir)
-        if gstep is None:
-            raise SystemExit(f"no step-* checkpoint in {args.ckpt_dir}")
+        gstep = resolved_gstep
         ckpt_path = os.path.join(args.ckpt_dir, f"step-{gstep:08d}")
         rep["ckpt"] = ckpt_path
         text_model, lm_head, dcp_step, seq_tokens, spare = load_dcp_into_model(args.model, ckpt_path, args.device)
+        if dcp_step != gstep:
+            raise ValueError(f"checkpoint directory step {gstep} restored embedded step {dcp_step}")
         rep["dcp_step"], rep["dcp_seq_tokens"], rep["spare_rows"] = dcp_step, seq_tokens, spare.get("spare_rows")
         mid = mask_token_id(text_model, tok)
         eos_id = tok.eos_token_id
@@ -482,14 +539,22 @@ def main(argv=None) -> int:
                 ids = prompt_ids(tok, it, demos)
                 text, meta = run_one_dllm(text_model, lm_head, tok, ids, block=args.block, threshold=args.threshold, sub_block=args.sub_block, max_new=args.max_new, mask_id=mid, eos_id=eos_id)
                 ok, pred, method = score(text, it["answer"])
-                r = {"idx": idx, "question": it["question"], "prompt_len": len(ids), "pred": pred, "method": method, "ok": ok, "wall_s": meta.pop("wall_s"), "trace": meta}
+                r = {"idx": idx, "question": it["question"], "prompt_len": len(ids), "generated_tokens": int(meta.pop("generated_tokens")), "pred": pred, "method": method, "ok": ok, "wall_s": meta.pop("wall_s"), "latency_kind": "item", "output_sha256": hashlib.sha256(text.encode()).hexdigest(), "trace": meta}
                 _append_result(results_path, r)
                 done[idx] = r
                 if i % args.report_every == 0 or i + 1 == len(pending):
                     _print_progress("DLLM", done, items, t0)
 
     scored = accuracy([(r["ok"], r["method"]) for r in done.values()])
-    rep.update({"done": len(done), "subset_scored": scored, "wall_s": round(time.time() - t0, 1), "gpu": _gpu_line()})
+    measured = inference_metrics(list(done.values()))
+    peak_allocated = torch.cuda.max_memory_allocated() / 2**30 if torch.cuda.is_available() else None
+    peak_reserved = torch.cuda.max_memory_reserved() / 2**30 if torch.cuda.is_available() else None
+    job_wall = round(time.time() - t0, 1)
+    rep.update({"done": len(done), "subset_scored": scored, "inference_metrics": measured,
+                "job_wall_s": job_wall, "wall_s": job_wall, "gpu": _gpu_line(),
+                "precision": "bfloat16", "backend": "sdpa + golden block-diffusion decoder" if args.mode == "dllm" else "transformers generate + sdpa",
+                "peak_gpu_allocated_gib": round(peak_allocated, 3) if peak_allocated is not None else None,
+                "peak_gpu_reserved_gib": round(peak_reserved, 3) if peak_reserved is not None else None})
     # full texts live in the JSONL; the report keeps aggregates only (texts are big)
     with open(os.path.join(args.out, "report.json"), "w") as f:
         json.dump(rep, f, indent=1)
