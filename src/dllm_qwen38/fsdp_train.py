@@ -132,7 +132,32 @@ class LayerStep(torch.nn.Module):
         return h0, ht
 
 
-def build_and_shard(text_model, layers: int | None = None):
+class LayerStack(torch.nn.ModuleList):
+    """Callable layer container used as the true FSDP iteration root.
+
+    Keeping the numeric ``ModuleList`` children preserves the existing
+    ``text_model.layers.N.layer.*`` checkpoint names. The checkpoint loop must live inside
+    this called module: merely registering a non-called parent does not establish a common
+    FSDP iteration root or a full post-forward order.
+    """
+
+    def forward(self, h0, ht, pos, mask, block: int, checkpointing: bool):
+        def _run(step, h0_, ht_):
+            return step(h0_, ht_, pos, mask, block)
+
+        for step in self:
+            if checkpointing and torch.is_grad_enabled():
+                h0, ht = _grad_checkpoint(
+                    partial(_run, step), h0, ht, use_reentrant=False
+                )
+            else:
+                h0, ht = _run(step, h0, ht)
+        return h0, ht
+
+
+def build_and_shard(
+    text_model, layers: int | None = None, fsdp_topology: str = "sibling"
+):
     """Wrap each decoder layer in a LayerStep and FSDP2-shard each unit.
 
     `reshard_after_forward=True`: gather for the forward's four reads (two mixer calls + two
@@ -168,6 +193,16 @@ def build_and_shard(text_model, layers: int | None = None):
         text_model.layers[i] = step
         fully_shard(step, reshard_after_forward=True, mp_policy=mp)
         steps.append(step)
+    if fsdp_topology == "root":
+        layer_stack = LayerStack(steps)
+        text_model.layers = layer_stack
+        # Bottom-up child groups plus a called root is PyTorch FSDP2's standard overlap
+        # topology. The root owns no additional parameters, but its state discovers all
+        # descendant FSDP states at lazy init and gives them one state/communication context.
+        fully_shard(layer_stack, reshard_after_forward=True, mp_policy=mp)
+        return layer_stack
+    if fsdp_topology != "sibling":
+        raise ValueError(f"unknown FSDP topology {fsdp_topology!r}")
     return steps  # the LayerSteps, NOT `stack`: the raw HF layers must never be called again
     # (calling a raw layer reads its sharded DTensor params with no unshard hook — the
     # mixed-Tensor/DTensor crash of the first smoke, 2026-09-12)
@@ -206,6 +241,83 @@ def _install_shared_rs_states(steps: list, log=print) -> None:
         print(f"RS-SHARE\tok\t{len(steps)} units share one list (id {list_ids[0] % 2**32:#x})", flush=True)
 
 
+def _topology_probe(steps, fsdp_topology: str) -> dict:
+    """Inspect the post-lazy-init FSDP topology before the first backward."""
+    child_states = [step._get_fsdp_state() for step in steps]
+    if fsdp_topology == "root":
+        root_state = steps._get_fsdp_state()
+        states = [root_state, *child_states]
+        all_states = list(root_state._state_ctx.all_states)
+        post_forward_order = list(root_state._comm_ctx.post_forward_order)
+    else:
+        root_state = None
+        states = child_states
+        all_states = []
+        post_forward_order = []
+
+    groups = [group for state in child_states for group in state._fsdp_param_groups]
+    report = {
+        "requested": fsdp_topology,
+        "layers": len(steps),
+        "child_param_groups": len(groups),
+        "root_is_root": bool(root_state is not None and root_state._is_root is True),
+        "child_root_count": sum(state._is_root is True for state in child_states),
+        "distinct_comm_contexts": len({id(state._comm_ctx) for state in states}),
+        "distinct_state_contexts": len({id(state._state_ctx) for state in states}),
+        "root_all_states": len(all_states),
+        "post_forward_order": len(post_forward_order),
+        "post_forward_unique_groups": len({id(group) for group in post_forward_order}),
+        "distinct_group_comm_contexts": len({id(group.comm_ctx) for group in groups}),
+        "distinct_rs_state_lists": len(
+            {id(group.comm_ctx.reduce_scatter_states) for group in groups}
+        ),
+    }
+    if fsdp_topology == "root":
+        expected_states = len(steps) + 1
+        errors = []
+        if not report["root_is_root"]:
+            errors.append("called LayerStack is not the FSDP root")
+        if report["child_root_count"] != 0:
+            errors.append("one or more child layers still identify as roots")
+        if report["root_all_states"] != expected_states:
+            errors.append(
+                f"root sees {report['root_all_states']} states, expected {expected_states}"
+            )
+        if report["distinct_comm_contexts"] != 1 or report["distinct_group_comm_contexts"] != 1:
+            errors.append("root and child groups do not share one communication context")
+        if report["distinct_state_contexts"] != 1:
+            errors.append("root and children do not share one iteration state context")
+        if report["post_forward_order"] != len(steps):
+            errors.append(
+                f"post-forward order has {report['post_forward_order']} groups, expected {len(steps)}"
+            )
+        if report["post_forward_unique_groups"] != len(steps):
+            errors.append("post-forward order does not contain every child group exactly once")
+        if report["distinct_rs_state_lists"] != 1:
+            errors.append("child groups do not share the built-in reduce-scatter state list")
+        report["errors"] = errors
+        report["passed"] = not errors
+    else:
+        report["errors"] = []
+        report["passed"] = True
+    return report
+
+
+def _all_rank_topology_probe(steps, fsdp_topology: str) -> dict:
+    """Fail closed if any rank observes a different or invalid root topology."""
+    report = _topology_probe(steps, fsdp_topology)
+    reports = [None] * dist.get_world_size()
+    dist.all_gather_object(reports, report)
+    same = all(item == reports[0] for item in reports)
+    report["all_ranks_match"] = same
+    if not report["passed"] or not same:
+        raise RuntimeError(
+            "FSDP topology gate failed: "
+            + json.dumps({"rank_report": report, "all_rank_reports": reports}, sort_keys=True)
+        )
+    return report
+
+
 def _sync_replicated_grads(uniq) -> None:
     """DDP-average the grads of params outside every FSDP unit.
 
@@ -223,7 +335,7 @@ def _sync_replicated_grads(uniq) -> None:
         g.div_(world)
 
 
-def _clip_grads(uniq, max_norm: float) -> None:
+def _clip_grads(uniq, max_norm: float) -> float:
     """One global 2-norm clip across FSDP units (DTensor grads) and replicated params (plain grads).
 
     `torch.nn.utils.clip_grad_norm_` cannot take the mixed list — replicated params' grads are
@@ -252,6 +364,7 @@ def _clip_grads(uniq, max_norm: float) -> None:
         for p in uniq:
             if p.grad is not None:
                 p.grad.mul_(coef)  # python-float mul dispatches the Scalar overload — DTensor-safe
+    return total
 
 
 def _gather_census(steps, tag: str) -> None:
@@ -338,6 +451,26 @@ class _Root(torch.nn.Module):
         super().__init__()
         self.text_model = text_model
         self.lm_head = lm_head
+
+
+def _checkpoint_schema(root) -> dict:
+    """Hash model-state names/shapes/dtypes without copying tensor payloads."""
+    import hashlib
+
+    state = get_model_state_dict(root)
+    h = hashlib.sha256()
+    tensor_count = 0
+    for name in sorted(state):
+        value = state[name]
+        values = value.items() if isinstance(value, dict) else [("", value)]
+        for child_name, tensor in values:
+            if not torch.is_tensor(tensor):
+                continue
+            tensor_count += 1
+            h.update(
+                f"{name}\x1f{child_name}\x1f{tuple(tensor.shape)}\x1f{tensor.dtype}\n".encode()
+            )
+    return {"sha256": h.hexdigest(), "tensor_count": tensor_count}
 
 
 def _unique_params(text_model, lm_head):
@@ -575,7 +708,15 @@ def _load_checkpoint(ckpt_dir: str, gstep: int, root, opt, *, verify_fingerprint
     return int(carry["seq_tokens"].item())
 
 
-def fsdp_forward(text_model, steps, x0_ids, xt_ids, block: int, checkpointing: bool = False):
+def fsdp_forward(
+    text_model,
+    steps,
+    x0_ids,
+    xt_ids,
+    block: int,
+    checkpointing: bool = False,
+    fsdp_topology: str = "sibling",
+):
     """Training-time forward on the sharded stack; returns final-normed hiddens of both streams.
 
     Same shape contract as `block_diffusion_forward(output="hidden")`; [2L, 2L] mask, state
@@ -588,14 +729,21 @@ def fsdp_forward(text_model, steps, x0_ids, xt_ids, block: int, checkpointing: b
     pos = (torch.cat([cos, cos], 1), torch.cat([sin, sin], 1))
     mask = complementary_mask(L, block, h0.dtype, h0.device)
 
-    def _run(step, h0_, ht_):
-        return step(h0_, ht_, pos, mask, block)
+    if fsdp_topology == "root":
+        # Calling this root is the candidate's only execution-order change. Its forward owns
+        # the exact same partial-bound, non-reentrant per-layer checkpoint loop below.
+        h0, ht = steps(h0, ht, pos, mask, block, checkpointing)
+    else:
+        def _run(step, h0_, ht_):
+            return step(h0_, ht_, pos, mask, block)
 
-    for step in steps:
-        if checkpointing and torch.is_grad_enabled():
-            h0, ht = _grad_checkpoint(partial(_run, step), h0, ht, use_reentrant=False)
-        else:
-            h0, ht = _run(step, h0, ht)
+        for step in steps:
+            if checkpointing and torch.is_grad_enabled():
+                h0, ht = _grad_checkpoint(
+                    partial(_run, step), h0, ht, use_reentrant=False
+                )
+            else:
+                h0, ht = _run(step, h0, ht)
     return text_model.norm(ht), text_model.norm(h0)
 
 
@@ -616,6 +764,7 @@ def train_fsdp(
     ckpt_dir: str | None = None,
     ckpt_every: int = 0,
     checkpointing: bool = False,
+    fsdp_topology: str = "sibling",
     mem_history: bool = False,
     fingerprint_saves: str = "window_end",  # "window_end": only the last step's save pays the fingerprint hash; "all": cadence saves too (selftest)
     grad_clip: float = 1.0,
@@ -644,6 +793,8 @@ def train_fsdp(
 
     local = None
     losses, seq_tokens_win, t0, skipped = [], 0, time.time(), 0
+    topology_report = None
+    grad_norm_first = None
     measured_t0 = None
     measured_seq_tokens = 0
     torch.cuda.reset_peak_memory_stats()
@@ -669,12 +820,30 @@ def train_fsdp(
             sl = slice(rank * local, (rank + 1) * local)
             x0_r, pl_r, vl_r = x0[sl], prompt_len[sl], valid_len[sl]
             x0_2, xt_2, m_2 = complementary_step_inputs(x0_r, pl_r, block, mask_id, torch.Generator(device=device).manual_seed(gstep * 1000 + rank), vl_r)
-            ht, _ = fsdp_forward(text_model, steps, x0_2, xt_2, block, checkpointing=checkpointing)
+            ht, _ = fsdp_forward(
+                text_model,
+                steps,
+                x0_2,
+                xt_2,
+                block,
+                checkpointing=checkpointing,
+                fsdp_topology=fsdp_topology,
+            )
             if local_step == 1:
-                # post-lazy-init shared RS list — see _install_shared_rs_states; every rank
-                # installs (each rank owns its own Python objects). In time for this window's
-                # first backward: the first forward completed all 64 units' lazy init.
-                _install_shared_rs_states(steps, log=print if rank == 0 else (lambda *a, **k: None))
+                if fsdp_topology == "sibling":
+                    # Production baseline only: repair the private sibling RS lists after lazy
+                    # init. The true-root candidate must use FSDP2's built-in shared context.
+                    _install_shared_rs_states(
+                        steps, log=print if rank == 0 else (lambda *a, **k: None)
+                    )
+                else:
+                    topology_report = _all_rank_topology_probe(steps, fsdp_topology)
+                    if rank == 0:
+                        print(
+                            "FSDP-TOPOLOGY\t"
+                            + json.dumps(topology_report, sort_keys=True),
+                            flush=True,
+                        )
             if rank == 0 and local_step == 1:
                 print(f"MEM\tafter fwd\tallocated {torch.cuda.memory_allocated()/2**30:.2f} GiB\treserved {torch.cuda.memory_reserved()/2**30:.2f} GiB")
             if mem_history and rank == 0 and local_step <= 2:
@@ -703,7 +872,9 @@ def train_fsdp(
             if mem_history and rank == 0 and local_step <= 2:
                 _gather_census(steps, f"after bwd s{gstep}")
             _sync_replicated_grads(uniq)  # before the clip: the clip must see the averaged plain grads
-            _clip_grads(uniq, grad_clip)
+            grad_norm = _clip_grads(uniq, grad_clip)
+            if grad_norm_first is None:
+                grad_norm_first = grad_norm
             opt.step()
             ce_all = ce_sum.detach().clone()
             dist.all_reduce(ce_all)
@@ -795,6 +966,11 @@ def train_fsdp(
         "seconds": el,
         "peak_mem_gib": round(peak.item() / 2**30, 2),
         "checkpointing": checkpointing,
+        "checkpoint_impl": "non_reentrant_per_layer" if checkpointing else "disabled",
+        "checkpoint_regions_per_forward": len(steps) if checkpointing else 0,
+        "fsdp_topology": fsdp_topology,
+        "topology_probe": topology_report,
+        "grad_norm_first": grad_norm_first,
         "gdn_impl": g_last,
         "gdn_reason": g_reason,
         "weight_spread": spread,
@@ -819,6 +995,8 @@ def main(argv=None) -> int:
     p.add_argument("--gdn", default="torch", choices=["auto", "torch", "fla"])
     p.add_argument("--causal-conv", default="auto", choices=["auto", "reference", "optimized"], help="force the causal conv backend; optimized fails closed when the compiled extension is unavailable")
     p.add_argument("--causal-conv-probe", action="store_true", help="compare optimized causal-conv1d forward/backward with the explicit reference before sharding")
+    p.add_argument("--fsdp-topology", default="sibling", choices=["sibling", "root"], help="FSDP2 execution topology; sibling preserves the production baseline, root adds a called parent for implicit communication prefetch")
+    p.add_argument("--checkpoint-schema-probe", action="store_true", help="report a payload-free DCP model key/shape/dtype digest for topology compatibility tests")
     p.add_argument("--tf32", action="store_true", help="use TF32 Tensor Cores for float32 matmuls (default: off/highest precision baseline)")
     p.add_argument("--warmup-steps", type=int, default=0, help="exclude this many initial steps from measured_* throughput fields")
     p.add_argument("--seed", type=int, default=0)
@@ -888,7 +1066,12 @@ def main(argv=None) -> int:
         )
         if rank == 0:
             print("CAUSAL-CONV-PROBE\t" + json.dumps(conv_probe, sort_keys=True), flush=True)
-    steps = build_and_shard(text_model, a.layers)
+    steps = build_and_shard(text_model, a.layers, a.fsdp_topology)
+    checkpoint_schema = (
+        _checkpoint_schema(_Root(text_model, lm_head))
+        if a.checkpoint_schema_probe
+        else None
+    )
     if rank == 0:
         print(f"MEM\tafter shard\tallocated {torch.cuda.memory_allocated()/2**30:.2f} GiB\treserved {torch.cuda.memory_reserved()/2**30:.2f} GiB")
     if rank == 0:
@@ -1032,6 +1215,7 @@ def main(argv=None) -> int:
         block=a.block, mask_id=mask_id, n_steps=n_steps, start_step=start_step, seq_tokens_start=seq_tokens_start,
         ckpt_dir=a.ckpt_dir, ckpt_every=(n_steps // 2) if a.resume_selftest else a.ckpt_every,
         checkpointing=a.grad_checkpoint, mem_history=a.mem_history,
+        fsdp_topology=a.fsdp_topology,
         warmup_steps=a.warmup_steps,
         # A persistent Modal call can still be preempted.  Fingerprint every
         # cadence save on resumed production windows so a retry can safely
@@ -1044,7 +1228,7 @@ def main(argv=None) -> int:
             f"forced causal conv backend {a.causal_conv!r} was not active:"
             f" last={conv_last!r} reason={conv_reason!r}"
         )
-    rep.update({"model": a.model, "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "layers": a.layers, "ckpt_dir": a.ckpt_dir, "ckpt_every": a.ckpt_every, "resume": a.resume, "target_step": a.target_step, "tf32": tf32, "causal_conv": {"requested": a.causal_conv, "active": conv_last, "reason": conv_reason, "package_version": conv_version}, "causal_conv_probe": conv_probe})
+    rep.update({"model": a.model, "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "layers": a.layers, "ckpt_dir": a.ckpt_dir, "ckpt_every": a.ckpt_every, "resume": a.resume, "target_step": a.target_step, "tf32": tf32, "causal_conv": {"requested": a.causal_conv, "active": conv_last, "reason": conv_reason, "package_version": conv_version}, "causal_conv_probe": conv_probe, "checkpoint_schema": checkpoint_schema})
 
     if a.resume_selftest:
         # the fidelity gate (re-specified 2026-09-13, owner-approved after measurement):
@@ -1071,7 +1255,7 @@ def main(argv=None) -> int:
         gc.collect()
         torch.cuda.empty_cache()
         text_model, lm_head, _ = load_checkpoint(a.model, torch.bfloat16, "cuda", attn_implementation="sdpa")
-        steps = build_and_shard(text_model, a.layers)
+        steps = build_and_shard(text_model, a.layers, a.fsdp_topology)
         uniq, uniq_names = _unique_params(text_model, lm_head)
         for pp in uniq:
             pp.requires_grad_(True)
@@ -1084,6 +1268,7 @@ def main(argv=None) -> int:
             text_model, lm_head, steps, batches, opt=opt, uniq=uniq, uniq_names=uniq_names,
             block=a.block, mask_id=mask_id, n_steps=a.steps - mid, start_step=mid, seq_tokens_start=seq_tokens_start,
             ckpt_dir=None, ckpt_every=0, checkpointing=a.grad_checkpoint, mem_history=False,
+            fsdp_topology=a.fsdp_topology,
             warmup_steps=0,
         )
         ref, got = rep["losses"][mid:], rep2["losses"]
