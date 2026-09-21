@@ -28,6 +28,7 @@ image = (
     modal.Image.from_registry(
         "nvidia/cuda:13.0.2-devel-ubuntu24.04", add_python="3.12"
     )
+    .apt_install("build-essential")
     .pip_install(
         "torch>=2.6",
         "transformers>=5.17",
@@ -43,6 +44,7 @@ image = (
     # causal-conv1d's upstream build imports the already-installed torch package.  The second
     # layer and --no-build-isolation are therefore intentional.  A missing binary extension is
     # still rejected at runtime; a Python package import alone never qualifies the candidate.
+    .env({"CC": "gcc", "CXX": "g++"})
     .run_commands("python -m pip install causal-conv1d==1.7.0 --no-build-isolation")
     .env(
         {
