@@ -21,7 +21,13 @@ import modal
 app = modal.App("dllm-qwen38-mfu-causal-conv")
 
 image = (
-    modal.Image.debian_slim(python_version="3.12")
+    # The causal-conv1d PyPI release is an sdist for this Python/Torch combination and
+    # compiles a CUDA extension during the image build.  Use the CUDA *devel* image so
+    # nvcc is present; debian_slim only has the runtime libraries and fails metadata
+    # generation before compilation.
+    modal.Image.from_registry(
+        "nvidia/cuda:13.0.2-devel-ubuntu24.04", add_python="3.12"
+    )
     .pip_install(
         "torch>=2.6",
         "transformers>=5.17",
