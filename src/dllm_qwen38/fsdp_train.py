@@ -78,7 +78,7 @@ from torch.distributed.tensor import DTensor
 from torch.utils.checkpoint import checkpoint as _grad_checkpoint
 
 from .blockdiff import FULL, LINEAR, _rotary, complementary_mask
-from .gdn import gdn_mixer_forward, last_impl
+from .gdn import conv_kernel_diff, gdn_mixer_forward, last_conv_impl, last_impl
 from .objective import complementary_step_inputs, mask_token_id
 from .precision import configure_tf32
 from .recovery import format_fingerprint_tsv, latest_atomic_dcp_checkpoint, resolve_n_steps
@@ -817,6 +817,8 @@ def main(argv=None) -> int:
     p.add_argument("--grad-checkpoint", action="store_true")
     p.add_argument("--mem-history", action="store_true", help="record alloc stacks (MEMHIST dump at OOM) + MEMCENSUS per-unit gather census")
     p.add_argument("--gdn", default="torch", choices=["auto", "torch", "fla"])
+    p.add_argument("--causal-conv", default="auto", choices=["auto", "reference", "optimized"], help="force the causal conv backend; optimized fails closed when the compiled extension is unavailable")
+    p.add_argument("--causal-conv-probe", action="store_true", help="compare optimized causal-conv1d forward/backward with the explicit reference before sharding")
     p.add_argument("--tf32", action="store_true", help="use TF32 Tensor Cores for float32 matmuls (default: off/highest precision baseline)")
     p.add_argument("--warmup-steps", type=int, default=0, help="exclude this many initial steps from measured_* throughput fields")
     p.add_argument("--seed", type=int, default=0)
@@ -870,9 +872,22 @@ def main(argv=None) -> int:
     from . import gdn as _gdn
 
     _gdn.set_impl(a.gdn if a.gdn != "auto" else None)
+    _gdn.set_conv_impl(a.causal_conv if a.causal_conv != "auto" else None)
     text_model, lm_head, _ = load_checkpoint(a.model, torch.bfloat16, "cuda", attn_implementation="sdpa")
     tok = AutoTokenizer.from_pretrained(a.model)
     mask_id = mask_token_id(text_model, tok)
+    conv_probe = None
+    if a.causal_conv_probe:
+        linear_index = next(i for i, kind in enumerate(text_model.config.layer_types) if kind == LINEAR)
+        conv_probe = conv_kernel_diff(
+            text_model.layers[linear_index].linear_attn,
+            T=a.block + text_model.layers[linear_index].linear_attn.conv_kernel_size - 1,
+            B=2,
+            seed=a.seed,
+            device="cuda",
+        )
+        if rank == 0:
+            print("CAUSAL-CONV-PROBE\t" + json.dumps(conv_probe, sort_keys=True), flush=True)
     steps = build_and_shard(text_model, a.layers)
     if rank == 0:
         print(f"MEM\tafter shard\tallocated {torch.cuda.memory_allocated()/2**30:.2f} GiB\treserved {torch.cuda.memory_reserved()/2**30:.2f} GiB")
@@ -1023,7 +1038,13 @@ def main(argv=None) -> int:
         # continue from the newest atomic checkpoint instead of failing closed.
         fingerprint_saves="all" if (a.resume or a.resume_selftest) else "window_end",
     )
-    rep.update({"model": a.model, "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "layers": a.layers, "ckpt_dir": a.ckpt_dir, "ckpt_every": a.ckpt_every, "resume": a.resume, "target_step": a.target_step, "tf32": tf32})
+    conv_last, conv_reason, conv_version = last_conv_impl()
+    if a.causal_conv != "auto" and conv_last != a.causal_conv:
+        raise RuntimeError(
+            f"forced causal conv backend {a.causal_conv!r} was not active:"
+            f" last={conv_last!r} reason={conv_reason!r}"
+        )
+    rep.update({"model": a.model, "data": a.data, "block": a.block, "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "layers": a.layers, "ckpt_dir": a.ckpt_dir, "ckpt_every": a.ckpt_every, "resume": a.resume, "target_step": a.target_step, "tf32": tf32, "causal_conv": {"requested": a.causal_conv, "active": conv_last, "reason": conv_reason, "package_version": conv_version}, "causal_conv_probe": conv_probe})
 
     if a.resume_selftest:
         # the fidelity gate (re-specified 2026-09-13, owner-approved after measurement):

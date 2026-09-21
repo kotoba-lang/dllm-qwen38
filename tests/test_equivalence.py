@@ -84,6 +84,41 @@ def test_gdn_need_states_false_matches_true_and_skips_states():
     assert last_impl()[0] == "reference"  # cpu: the reference is the only core, fla never tried
 
 
+def test_explicit_causal_conv_reference_is_reported_and_preserves_shape():
+    import torch
+
+    from dllm_qwen38 import gdn
+
+    text_model, _ = tiny_text_model(seed=7)
+    mixer = text_model.layers[0].linear_attn
+    hidden = torch.randn(2, 16, text_model.config.hidden_size)
+    try:
+        gdn.set_conv_impl("reference")
+        out, states, raw = gdn.gdn_mixer_forward(
+            mixer, hidden, chunk_size=8, need_states=True
+        )
+        active, reason, version = gdn.last_conv_impl()
+        assert out.shape == hidden.shape
+        assert states.shape[1] == 2
+        assert raw.shape[-1] == hidden.shape[1]
+        assert active == "reference"
+        assert "forced" in reason
+        assert version is None or isinstance(version, str)  # package availability is orthogonal
+    finally:
+        gdn.set_conv_impl(None)
+
+
+def test_unknown_causal_conv_backend_is_rejected():
+    from dllm_qwen38 import gdn
+
+    try:
+        gdn.set_conv_impl("silent-fallback")
+    except ValueError as exc:
+        assert "unknown causal-conv1d implementation" in str(exc)
+    else:
+        raise AssertionError("unknown backend must fail closed")
+
+
 def test_checkpointing_matches_plain_forward_grads_and_learns():
     import torch
 

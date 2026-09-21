@@ -17,11 +17,24 @@ from __future__ import annotations
 
 import torch
 import torch.nn.functional as F
-from transformers.models.qwen3_5.modeling_qwen3_5 import causal_conv1d_fn, l2norm
+from transformers.models.qwen3_5.modeling_qwen3_5 import causal_conv1d_fn as transformers_causal_conv1d_fn, l2norm
 
 # Which core the mixer used for its *last* call, and why — set so reports can name the path they
 # measured rather than assuming the fast one ran ("fla" / "reference" / a fallback reason).
 _FLA = {"fn": None, "tried": False, "force": None, "last": "reference", "reason": ""}
+
+# The Transformers callable silently falls back when causal-conv1d is absent.  That is useful in
+# production but invalid for an A/B: both legs could measure the same fallback while being named
+# differently.  The experiment selector below has two explicit, fail-closed modes and keeps
+# ``None`` as the existing auto/Transformers behaviour.
+_CONV = {
+    "fn": None,
+    "tried": False,
+    "force": None,
+    "last": "unmeasured",
+    "reason": "",
+    "package_version": None,
+}
 
 
 def _fla_chunk():
@@ -43,6 +56,138 @@ def set_impl(name):
 
 def last_impl():
     return _FLA["last"], _FLA["reason"]
+
+
+def set_conv_impl(name):
+    """Select ``reference`` / ``optimized`` / ``None`` (Transformers auto behaviour)."""
+    if name not in (None, "reference", "optimized"):
+        raise ValueError(f"unknown causal-conv1d implementation {name!r}")
+    _CONV["force"] = name
+
+
+def last_conv_impl():
+    """Return the measured backend, diagnostic reason, and installed package version."""
+    return _CONV["last"], _CONV["reason"], _CONV["package_version"]
+
+
+def _optimized_conv():
+    if not _CONV["tried"]:
+        _CONV["tried"] = True
+        try:
+            import importlib.metadata
+
+            import causal_conv1d_cuda
+            from causal_conv1d import causal_conv1d_fn
+
+            extension_path = str(getattr(causal_conv1d_cuda, "__file__", ""))
+            if not extension_path.endswith((".so", ".pyd")):
+                raise RuntimeError(f"causal_conv1d_cuda is not a compiled extension: {extension_path!r}")
+            _CONV["fn"] = causal_conv1d_fn
+            _CONV["package_version"] = importlib.metadata.version("causal-conv1d")
+        except Exception as exc:  # noqa: BLE001 - the exact refusal reason belongs in the report
+            _CONV["reason"] = f"{type(exc).__name__}: {exc}"
+    return _CONV["fn"]
+
+
+def _reference_causal_conv1d(x, weight, bias=None, activation=None):
+    """The Transformers PyTorch fallback, made explicit for the control leg."""
+    seq_len = x.shape[-1]
+    out = F.conv1d(
+        x.to(weight.dtype),
+        weight=weight.unsqueeze(1),
+        bias=bias,
+        padding=weight.shape[-1] - 1,
+        groups=x.shape[1],
+    )[:, :, :seq_len]
+    if activation in ("silu", "swish"):
+        out = F.silu(out)
+    elif activation is not None:
+        raise ValueError(f"unsupported causal conv activation {activation!r}")
+    return out.to(x.dtype)
+
+
+def _causal_conv1d(x, weight, bias=None, activation=None):
+    force = _CONV["force"]
+    if force == "reference":
+        _CONV["last"], _CONV["reason"] = "reference", "forced PyTorch grouped conv1d"
+        return _reference_causal_conv1d(x, weight, bias, activation)
+    if force == "optimized":
+        fn = _optimized_conv()
+        if fn is None:
+            _CONV["last"] = "unavailable"
+            raise RuntimeError(f"optimized causal-conv1d forced but unavailable: {_CONV['reason']}")
+        out = fn(x, weight, bias, activation=activation)
+        _CONV["last"], _CONV["reason"] = "optimized", "compiled causal_conv1d_cuda extension"
+        return out
+    _CONV["last"], _CONV["reason"] = "transformers-auto", "Transformers dispatch/fallback"
+    return transformers_causal_conv1d_fn(x, weight, bias, activation=activation)
+
+
+def conv_kernel_diff(m, *, T: int, B: int = 2, seed: int = 0, device: str = "cuda") -> dict:
+    """Compare optimized causal-conv1d with the explicit reference, including backward.
+
+    The probe uses detached copies of the real mixer's convolution parameters, so it cannot
+    populate or perturb model gradients.  ``fork_rng`` prevents the probe from changing the
+    subsequent training stream.
+    """
+    previous = _CONV["force"]
+    cuda_devices = [torch.cuda.current_device()] if str(device).startswith("cuda") else []
+    try:
+        with torch.random.fork_rng(devices=cuda_devices):
+            torch.manual_seed(seed)
+            dtype = next(m.parameters()).dtype
+            channels = m.conv1d.weight.shape[0]
+            base_x = torch.randn(B, channels, T, dtype=dtype, device=device)
+            base_w = m.conv1d.weight.squeeze(1).detach()
+            base_b = m.conv1d.bias.detach() if m.conv1d.bias is not None else None
+            grad_out = torch.randn(B, channels, T, dtype=dtype, device=device)
+
+            results = {}
+            for implementation in ("reference", "optimized"):
+                x = base_x.detach().clone().requires_grad_(True)
+                w = base_w.detach().clone().requires_grad_(True)
+                b = base_b.detach().clone().requires_grad_(True) if base_b is not None else None
+                set_conv_impl(implementation)
+                out = _causal_conv1d(x, w, b, activation=m.activation)
+                inputs = (x, w, b) if b is not None else (x, w)
+                grads = torch.autograd.grad(out, inputs, grad_outputs=grad_out)
+                results[implementation] = (out.detach(), tuple(g.detach() for g in grads))
+
+            ref_out, ref_grads = results["reference"]
+            opt_out, opt_grads = results["optimized"]
+            names = ("input", "weight", "bias")[: len(ref_grads)]
+            grad_diffs = {
+                name: float((got.float() - want.float()).abs().max())
+                for name, want, got in zip(names, ref_grads, opt_grads)
+            }
+            grad_dot = sum(
+                (want.float() * got.float()).sum() for want, got in zip(ref_grads, opt_grads)
+            )
+            ref_grad_sq = sum(want.float().square().sum() for want in ref_grads)
+            opt_grad_sq = sum(got.float().square().sum() for got in opt_grads)
+            grad_cosine = grad_dot / (ref_grad_sq.sqrt() * opt_grad_sq.sqrt()).clamp_min(1e-30)
+            grad_norm_ratio = opt_grad_sq.sqrt() / ref_grad_sq.sqrt().clamp_min(1e-30)
+            last, reason, version = last_conv_impl()
+            if last != "optimized":
+                raise RuntimeError(f"optimized causal-conv1d path not taken: {last} ({reason})")
+            return {
+                "out_max_abs_diff": float((opt_out.float() - ref_out.float()).abs().max()),
+                "grad_max_abs_diff": max(grad_diffs.values()),
+                "grad_max_abs_diff_by_input": grad_diffs,
+                "grad_cosine": float(grad_cosine),
+                "grad_norm_ratio": float(grad_norm_ratio),
+                "all_finite": bool(
+                    torch.isfinite(opt_out).all()
+                    and all(torch.isfinite(grad).all() for grad in opt_grads)
+                ),
+                "dtype": str(base_x.dtype),
+                "shape": list(base_x.shape),
+                "optimized_backend": last,
+                "backend_reason": reason,
+                "package_version": version,
+            }
+    finally:
+        set_conv_impl(previous)
 
 
 def chunk_gated_delta_rule_with_states(
@@ -215,7 +360,7 @@ def gdn_mixer_forward(
     a = m.in_proj_a(hidden_states)
 
     conv_in = raw_qkv if conv_prefix is None else torch.cat([conv_prefix, raw_qkv], dim=2)
-    mixed_qkv = causal_conv1d_fn(conv_in, m.conv1d.weight.squeeze(1), m.conv1d.bias, activation=m.activation)
+    mixed_qkv = _causal_conv1d(conv_in, m.conv1d.weight.squeeze(1), m.conv1d.bias, activation=m.activation)
     mixed_qkv = mixed_qkv[:, :, -seq_len:].transpose(1, 2)
 
     query, key, value = torch.split(mixed_qkv, [m.key_dim, m.key_dim, m.value_dim], dim=-1)

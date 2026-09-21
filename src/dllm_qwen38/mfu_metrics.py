@@ -113,3 +113,143 @@ def checkpoint_comparison(
             "30_percent": proxy_mfu(cand_tps) >= 0.30,
         },
     }
+
+
+def causal_conv_comparison(
+    baseline: dict,
+    candidate: dict,
+    *,
+    required_measured_steps: int = 30,
+    min_speedup: float = 1.08,
+    max_loss_abs_diff: float = 0.01,
+    max_kernel_out_abs_diff: float = 0.02,
+    min_kernel_grad_cosine: float = 0.999,
+    min_kernel_grad_norm_ratio: float = 0.99,
+    max_kernel_grad_norm_ratio: float = 1.01,
+    max_peak_mem_gib: float = 136.0,
+    max_peak_mem_regression_gib: float = 2.0,
+) -> dict:
+    """Compare explicit PyTorch and compiled causal-conv1d training legs.
+
+    Backend identity is a correctness condition: importing the package is not sufficient because
+    Transformers otherwise falls back silently.  The real-weight kernel probe checks both forward
+    and backward before either full training leg is admitted.
+    """
+    base_tps = float(baseline.get("measured_seq_tokens_per_s") or 0.0)
+    cand_tps = float(candidate.get("measured_seq_tokens_per_s") or 0.0)
+    speedup = cand_tps / base_tps if base_tps > 0.0 else None
+    base_losses = baseline.get("losses") or []
+    cand_losses = candidate.get("losses") or []
+    paired = min(len(base_losses), len(cand_losses), required_measured_steps)
+    base_measured_losses = base_losses[-paired:] if paired else []
+    cand_measured_losses = cand_losses[-paired:] if paired else []
+    loss_diffs = [
+        abs(float(cand_measured_losses[i]) - float(base_measured_losses[i]))
+        for i in range(paired)
+    ]
+    loss_max = max(loss_diffs) if loss_diffs else None
+    loss_mean = sum(loss_diffs) / paired if paired else None
+    probe = candidate.get("causal_conv_probe") or {}
+    base_peak = baseline.get("peak_mem_gib")
+    cand_peak = candidate.get("peak_mem_gib")
+    finite_reports = (
+        base_tps > 0.0
+        and cand_tps > 0.0
+        and all(math.isfinite(float(x)) for x in base_losses + cand_losses)
+    )
+    backend_modes = (
+        baseline.get("causal_conv", {}).get("requested") == "reference"
+        and baseline.get("causal_conv", {}).get("active") == "reference"
+        and candidate.get("causal_conv", {}).get("requested") == "optimized"
+        and candidate.get("causal_conv", {}).get("active") == "optimized"
+        and bool(candidate.get("causal_conv", {}).get("package_version"))
+    )
+    gates = {
+        "both_exited_zero": baseline.get("exit") == 0 and candidate.get("exit") == 0,
+        "both_tf32_disabled": baseline.get("tf32", {}).get("enabled") is False
+        and candidate.get("tf32", {}).get("enabled") is False,
+        "both_full_checkpointing": baseline.get("checkpointing") is True
+        and candidate.get("checkpointing") is True,
+        "backend_modes_correct": backend_modes,
+        "measured_steps_complete": baseline.get("measured_steps") == required_measured_steps
+        and candidate.get("measured_steps") == required_measured_steps,
+        "paired_loss_steps_complete": paired == required_measured_steps,
+        "finite_reports": finite_reports,
+        "both_weight_spread_zero": baseline.get("weight_spread") == 0.0
+        and candidate.get("weight_spread") == 0.0,
+        "paired_loss_within_limit": loss_max is not None and loss_max <= max_loss_abs_diff,
+        "optimized_probe_active": probe.get("optimized_backend") == "optimized"
+        and bool(probe.get("package_version")),
+        "optimized_probe_finite": probe.get("all_finite") is True,
+        "kernel_output_within_limit": probe.get("out_max_abs_diff") is not None
+        and float(probe["out_max_abs_diff"]) <= max_kernel_out_abs_diff,
+        "kernel_gradient_within_limit": probe.get("grad_cosine") is not None
+        and float(probe["grad_cosine"]) >= min_kernel_grad_cosine
+        and probe.get("grad_norm_ratio") is not None
+        and min_kernel_grad_norm_ratio
+        <= float(probe["grad_norm_ratio"])
+        <= max_kernel_grad_norm_ratio,
+        "candidate_memory_within_absolute_limit": cand_peak is not None
+        and float(cand_peak) <= max_peak_mem_gib,
+        "candidate_memory_regression_within_limit": base_peak is not None
+        and cand_peak is not None
+        and float(cand_peak) <= float(base_peak) + max_peak_mem_regression_gib,
+        "minimum_speedup_met": speedup is not None and speedup >= min_speedup,
+    }
+    correctness_keys = (
+        "both_exited_zero",
+        "both_tf32_disabled",
+        "both_full_checkpointing",
+        "backend_modes_correct",
+        "measured_steps_complete",
+        "paired_loss_steps_complete",
+        "finite_reports",
+        "both_weight_spread_zero",
+        "paired_loss_within_limit",
+        "optimized_probe_active",
+        "optimized_probe_finite",
+        "kernel_output_within_limit",
+        "kernel_gradient_within_limit",
+    )
+    safety_keys = (
+        "candidate_memory_within_absolute_limit",
+        "candidate_memory_regression_within_limit",
+    )
+    correctness_pass = all(gates[key] for key in correctness_keys)
+    safety_pass = all(gates[key] for key in safety_keys)
+    performance_pass = gates["minimum_speedup_met"]
+    return {
+        "baseline_measured_seq_tokens_per_s": base_tps,
+        "candidate_measured_seq_tokens_per_s": cand_tps,
+        "candidate_speedup": speedup,
+        "candidate_cost_ratio": (1.0 / speedup) if speedup else None,
+        "baseline_proxy_mfu": proxy_mfu(base_tps),
+        "candidate_proxy_mfu": proxy_mfu(cand_tps),
+        "proxy_mfu_definition": "6*N*4*unique_sequence_tokens_per_s/(8*989e12), N=27e9",
+        "paired_loss_steps": paired,
+        "loss_max_abs_diff": loss_max,
+        "loss_mean_abs_diff": loss_mean,
+        "kernel_probe": probe,
+        "baseline_peak_mem_gib": base_peak,
+        "candidate_peak_mem_gib": cand_peak,
+        "thresholds": {
+            "required_measured_steps": required_measured_steps,
+            "min_speedup": min_speedup,
+            "max_loss_abs_diff": max_loss_abs_diff,
+            "max_kernel_out_abs_diff": max_kernel_out_abs_diff,
+            "min_kernel_grad_cosine": min_kernel_grad_cosine,
+            "min_kernel_grad_norm_ratio": min_kernel_grad_norm_ratio,
+            "max_kernel_grad_norm_ratio": max_kernel_grad_norm_ratio,
+            "max_peak_mem_gib": max_peak_mem_gib,
+            "max_peak_mem_regression_gib": max_peak_mem_regression_gib,
+        },
+        "gates": gates,
+        "correctness_pass": correctness_pass,
+        "safety_pass": safety_pass,
+        "performance_pass": performance_pass,
+        "promotion_eligible": correctness_pass and safety_pass and performance_pass,
+        "mfu_milestones": {
+            "20_percent": proxy_mfu(cand_tps) >= 0.20,
+            "30_percent": proxy_mfu(cand_tps) >= 0.30,
+        },
+    }
