@@ -99,3 +99,26 @@ To reproduce a previously declared direction from saved captures, use `derive_di
 ```
 
 This command reproduces both saved target-pilot `.npy` direction hashes exactly; it does not add observations or demonstrate improvement.
+
+Use `collect.py` to produce a bundle for a complete, managed multi-condition experiment. It validates all case lists and stored summaries, recorded engine shutdown, dataset checksums, scorer revisions and paired engine profiles. It refuses incomplete runs and files that change during collection; it performs no inference or regrading. A plan names run directories relative to itself:
+
+```json
+{
+  "conditions": [
+    {"name": "original", "run": "runs/original"},
+    {"name": "no-op", "run": "runs/no-op"},
+    {"name": "candidate", "run": "runs/candidate"}
+  ],
+  "paired": [["original", "no-op"], ["original", "candidate"]],
+  "no_op": [["original", "no-op"]],
+  "qualification": "selected development diagnostic; not held-out improvement"
+}
+```
+
+```sh
+python3 tools/weight-space/collect.py /absolute/evidence/collection-plan.json \
+  --output /absolute/evidence/completed-bundle.json
+python3 tools/weight-space/test_collect.py
+```
+
+The collector adds scorer-revision and launch-profile checks beyond the current two-run `compare` command. Keep the recorded datasets and launch files available. Whole checkpoint files are not rehashed at collection time; their verified launch identities and artifact checksums are retained. A no-op entry records whether checkpoint hashes and response text agree, without counting a repeated answer as a new independent problem.

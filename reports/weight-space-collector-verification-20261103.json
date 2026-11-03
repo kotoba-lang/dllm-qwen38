@@ -1,0 +1,125 @@
+{
+  "issue": "JUN-799",
+  "status": "complete collector verification; Clover candidate comparison pending",
+  "collector_sha256": "34c7d3ca06fe63ce24f6c95e036e9a271bb8443b3e85e3186d74cb129d63a277",
+  "qwen_bundle_sha256": "88bc352a3335da58a2d3bf36879bb27bf22ca280fccc13c043c9b6fb81cad55f",
+  "qwen_summaries": {
+    "baseline": {
+      "n": 8,
+      "correct": 3,
+      "accuracy": 0.375,
+      "wall_seconds": 131.8291472492274,
+      "generated_tokens": 4383,
+      "seconds_per_correct": 43.9430490830758,
+      "tokens_per_correct": 1461.0,
+      "limit_hits": 3,
+      "no_final_answer": 3
+    },
+    "sham": {
+      "n": 8,
+      "correct": 3,
+      "accuracy": 0.375,
+      "wall_seconds": 144.08515112590976,
+      "generated_tokens": 4383,
+      "seconds_per_correct": 48.02838370863659,
+      "tokens_per_correct": 1461.0,
+      "limit_hits": 3,
+      "no_final_answer": 3
+    },
+    "projection025": {
+      "n": 8,
+      "correct": 3,
+      "accuracy": 0.375,
+      "wall_seconds": 155.71428833296522,
+      "generated_tokens": 4383,
+      "seconds_per_correct": 51.90476277765507,
+      "tokens_per_correct": 1461.0,
+      "limit_hits": 3,
+      "no_final_answer": 3
+    },
+    "random-matched": {
+      "n": 8,
+      "correct": 3,
+      "accuracy": 0.375,
+      "wall_seconds": 160.1398489989806,
+      "generated_tokens": 4383,
+      "seconds_per_correct": 53.379949666326866,
+      "tokens_per_correct": 1461.0,
+      "limit_hits": 3,
+      "no_final_answer": 3
+    },
+    "prompt-concise": {
+      "n": 8,
+      "correct": 7,
+      "accuracy": 0.875,
+      "wall_seconds": 28.257682832190767,
+      "generated_tokens": 668,
+      "seconds_per_correct": 4.03681183317011,
+      "tokens_per_correct": 95.42857142857143,
+      "limit_hits": 0,
+      "no_final_answer": 0
+    }
+  },
+  "qwen_no_op": [
+    {
+      "baseline": "baseline",
+      "candidate": "sham",
+      "checkpoint_hash_equal": true,
+      "exact_response_text_matches": 8,
+      "n": 8
+    }
+  ],
+  "qwen_paired_counts": [
+    {
+      "baseline": "baseline",
+      "candidate": "sham",
+      "wins": 0,
+      "losses": 0
+    },
+    {
+      "baseline": "baseline",
+      "candidate": "projection025",
+      "wins": 0,
+      "losses": 0
+    },
+    {
+      "baseline": "baseline",
+      "candidate": "random-matched",
+      "wins": 0,
+      "losses": 0
+    }
+  ],
+  "actual_incomplete_clover_rejection": "no-op: run not completed and stopped",
+  "clover_original_replay": {
+    "n": 8,
+    "exact_response_text_matches": 8,
+    "previous_dev32_results_sha256": "a3e253e454d26331830fb9488bde4e3e550223d2f509a3ad8f3141c4a6b89c1d",
+    "replay_results_sha256": "954296bcb511f50c76c698f2a135258da042bae71198eb682f088743edc27924",
+    "summary": {
+      "n": 8,
+      "correct": 2,
+      "accuracy": 0.25,
+      "wall_seconds": 705.2043308741413,
+      "generated_tokens": 7579,
+      "seconds_per_correct": 352.60216543707065,
+      "tokens_per_correct": 3789.5,
+      "limit_hits": 6,
+      "no_final_answer": 6
+    }
+  },
+  "negative_checks": [
+    "unstopped engine rejected",
+    "falsified summary rejected",
+    "scorer revision mismatch rejected",
+    "launch/manifest model mismatch rejected",
+    "changed engine profile rejected",
+    "changed dataset rejected",
+    "incomplete/reordered cases rejected"
+  ],
+  "limitations": [
+    "No inference or regrading by collection. Repeated same-case answers are not independent samples.",
+    "Collection relies on verified launch records and records hashes; checkpoint files are not rehashed by this read-only tool.",
+    "Original two-run comparator has fewer provenance checks. Active trial scorer source is unchanged; use strict collection for the complete experiment.",
+    "Clover scores remain incomplete; no candidate benefit or held-out improvement established."
+  ]
+}
