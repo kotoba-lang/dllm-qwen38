@@ -1,0 +1,51 @@
+{
+  "profile": "nfkc-casefold-number-mask-token5-jaccard080-v1",
+  "inputs": [
+    {
+      "file": "dev.json",
+      "sha256": "49e9bbd78dd79660b8152fa321576624de415398dd50019fd4c322d89d911a41",
+      "split": "dev",
+      "n": 32,
+      "role": "dev",
+      "index": 0
+    },
+    {
+      "file": "dev.json",
+      "sha256": "2e82ef509055cc68d9cfb1873a5467d3c4c5f7d755440fd73d99988345947dcc",
+      "split": "dev",
+      "n": 32,
+      "role": "dev",
+      "index": 1
+    },
+    {
+      "file": "validation.json",
+      "sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+      "split": "validation",
+      "n": 32,
+      "role": "validation",
+      "index": 0
+    },
+    {
+      "file": "validation.json",
+      "sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+      "split": "validation",
+      "n": 32,
+      "role": "validation",
+      "index": 1
+    }
+  ],
+  "cross_split_pair_count": 4096,
+  "flagged_pair_count": 0,
+  "flagged_pairs": [],
+  "maximum_number_masked_token5_jaccard": 0.07079646017699115,
+  "limitations": [
+    "A fixed lexical heuristic, not semantic equivalence or pretraining-contamination proof.",
+    "Only the supplied train-derived files are checked; final sets are not accessed.",
+    "No split changes or candidate tuning are authorized by this report."
+  ],
+  "issue": "JUN-799",
+  "date": "2026-11-04",
+  "tests": "Two synthetic unittest methods passed; no problem or reference text emitted.",
+  "source_sha256": "011b1ae27e24504971e7f74a9c875133085ab0aaa1210078b3b3be0b38c7ee4a",
+  "interpretation": "No flags under these prespecified lexical rules; semantic near-duplicate exclusion remains unqualified. No question files, scorer, candidates or splits changed."
+}

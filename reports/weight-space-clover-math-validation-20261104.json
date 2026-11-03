@@ -1,0 +1,696 @@
+{
+  "issue": "JUN-801",
+  "date": "2026-11-04",
+  "status": "Completed Clover frozen-candidate hard-integer MATH train-derived validation32",
+  "scope": "Four fixed conditions; individual validation questions, references and responses not inspected for editing; no final test accessed.",
+  "protocol_sha256": "e1f6a1dc8613aec7cac53863d68bfdcf9c2dddfed55d3410bb588a31a20a0377",
+  "bundle_sha256": "0ef2d58a8ac349c1a5f1d5bafac73eb25e25a59343efe4d89c38b7cbefa21fcf",
+  "independent_recollection_matches": true,
+  "bundle": {
+    "schema": "wsp.completed-run-bundle/v1",
+    "plan_sha256": "0d71b79df6343f04e68c79e72f13c1ba91e65d89aad8ea9040f0a199efa35fe8",
+    "collector_sha256": "34c7d3ca06fe63ce24f6c95e036e9a271bb8443b3e85e3186d74cb129d63a277",
+    "comparison_code_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9",
+    "qualification": "frozen-candidate independent train-derived validation; not final test or full regression qualification",
+    "runs": {
+      "original": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+          "case_ids": [
+            "041c58ac73e48f2daab6",
+            "04281fe296443d8a704c",
+            "042fef09efad3090f681",
+            "0437384a7c7591b1a738",
+            "0450826faa08d20e33bc",
+            "045e2373cc24d189cd69",
+            "0462f5ab348f2bef7aed",
+            "0465ab973142cb81b56a",
+            "048be0f7fd5645cba6f0",
+            "048eefaa11e0fb887b12",
+            "04e89fdaa1e900d6edc1",
+            "04fbc8a1a2f066245c86",
+            "05304c8194de00e06077",
+            "054ece40cabb9d8e9619",
+            "05befb9463cd3483627b",
+            "05c74cc3bf93630b6cc1",
+            "05d7a3a9f8a2369c574f",
+            "05ec6f6ac1776bff0766",
+            "0624eddddd8b513bd7cc",
+            "0653a0ed3fdab1276370",
+            "065469fc13b7709aa66c",
+            "0674f7860fe650bab170",
+            "06c7e818c1d42b3fa632",
+            "06fe9ab7bc6d7bc57835",
+            "071bac51d16c43496f5c",
+            "07287c7a93766c592d87",
+            "0768b378947bbcb81c27",
+            "07a411ab404a3c64334d",
+            "07d8f66764a3978684f6",
+            "07e793beb76b03628d1a",
+            "07ec2493170e5e5126f5",
+            "07ff07d8e9df568e7512"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+          "condition": "independent-validation-clover-math-integer-original",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 15,
+          "accuracy": 0.46875,
+          "wall_seconds": 2081.432828207966,
+          "generated_tokens": 25909,
+          "seconds_per_correct": 138.76218854719772,
+          "tokens_per_correct": 1727.2666666666667,
+          "limit_hits": 15,
+          "no_final_answer": 16
+        },
+        "artifact_sha256": {
+          "manifest.json": "4a871699610a6c524dcdf7926818710e99d0a2c4ca60c3b05085e14303f97b3c",
+          "launch.json": "b33f2e46e68de6b689354c8fa2e4c019c89d45fa07acfdfbaec83fc4dc9a47d1",
+          "process-status.json": "096b8c210491d964e177ce03cafad38d7f3127557e5e25992bd6f6b7702df44c",
+          "results.jsonl": "03e01ead5448ce27c500f82f06eb835dff3323373d71cf1128efc1913b825da8",
+          "summary.json": "e41043f65b9a7124c00409767aadda080893181c8c2ed8ad694aad5b103edb0a"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "requantize-only": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+          "case_ids": [
+            "041c58ac73e48f2daab6",
+            "04281fe296443d8a704c",
+            "042fef09efad3090f681",
+            "0437384a7c7591b1a738",
+            "0450826faa08d20e33bc",
+            "045e2373cc24d189cd69",
+            "0462f5ab348f2bef7aed",
+            "0465ab973142cb81b56a",
+            "048be0f7fd5645cba6f0",
+            "048eefaa11e0fb887b12",
+            "04e89fdaa1e900d6edc1",
+            "04fbc8a1a2f066245c86",
+            "05304c8194de00e06077",
+            "054ece40cabb9d8e9619",
+            "05befb9463cd3483627b",
+            "05c74cc3bf93630b6cc1",
+            "05d7a3a9f8a2369c574f",
+            "05ec6f6ac1776bff0766",
+            "0624eddddd8b513bd7cc",
+            "0653a0ed3fdab1276370",
+            "065469fc13b7709aa66c",
+            "0674f7860fe650bab170",
+            "06c7e818c1d42b3fa632",
+            "06fe9ab7bc6d7bc57835",
+            "071bac51d16c43496f5c",
+            "07287c7a93766c592d87",
+            "0768b378947bbcb81c27",
+            "07a411ab404a3c64334d",
+            "07d8f66764a3978684f6",
+            "07e793beb76b03628d1a",
+            "07ec2493170e5e5126f5",
+            "07ff07d8e9df568e7512"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "4b574153f571cf7305cbe1feafcc9c13c9fd8c5dd4dd6f44c1d797aa6048b99b",
+          "condition": "independent-validation-clover-math-integer-requantize-only",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 13,
+          "accuracy": 0.40625,
+          "wall_seconds": 2236.915936666308,
+          "generated_tokens": 25974,
+          "seconds_per_correct": 172.07045666663907,
+          "tokens_per_correct": 1998.0,
+          "limit_hits": 17,
+          "no_final_answer": 18
+        },
+        "artifact_sha256": {
+          "manifest.json": "3a7b6b558952ef3ce9f045c96dd5773b6fd99ac2ad28347b80bb2c0133bff68d",
+          "launch.json": "20cb8233e551b4138e5765a3cfb95ed8b2e9b0bc5316d89401d450b82a98e84b",
+          "process-status.json": "024c61d84464bad8aa1d89d63a28b3e200308eb4e405f1b2217cc9ac26ed6333",
+          "results.jsonl": "77b6a0b7f8be4819fa25cce460896e80d3120c20a289f173d025bb4a20481b11",
+          "summary.json": "91d30656c2a15f77220cbc381dc21dc316947044caa4d772986960451e28373b"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "projection025": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+          "case_ids": [
+            "041c58ac73e48f2daab6",
+            "04281fe296443d8a704c",
+            "042fef09efad3090f681",
+            "0437384a7c7591b1a738",
+            "0450826faa08d20e33bc",
+            "045e2373cc24d189cd69",
+            "0462f5ab348f2bef7aed",
+            "0465ab973142cb81b56a",
+            "048be0f7fd5645cba6f0",
+            "048eefaa11e0fb887b12",
+            "04e89fdaa1e900d6edc1",
+            "04fbc8a1a2f066245c86",
+            "05304c8194de00e06077",
+            "054ece40cabb9d8e9619",
+            "05befb9463cd3483627b",
+            "05c74cc3bf93630b6cc1",
+            "05d7a3a9f8a2369c574f",
+            "05ec6f6ac1776bff0766",
+            "0624eddddd8b513bd7cc",
+            "0653a0ed3fdab1276370",
+            "065469fc13b7709aa66c",
+            "0674f7860fe650bab170",
+            "06c7e818c1d42b3fa632",
+            "06fe9ab7bc6d7bc57835",
+            "071bac51d16c43496f5c",
+            "07287c7a93766c592d87",
+            "0768b378947bbcb81c27",
+            "07a411ab404a3c64334d",
+            "07d8f66764a3978684f6",
+            "07e793beb76b03628d1a",
+            "07ec2493170e5e5126f5",
+            "07ff07d8e9df568e7512"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "87ed108a00aaea988e0b063af305d9c06df4ec90198ccf735781d8a8a055669d",
+          "condition": "independent-validation-clover-math-integer-projection025",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 14,
+          "accuracy": 0.4375,
+          "wall_seconds": 2925.3770669985097,
+          "generated_tokens": 25684,
+          "seconds_per_correct": 208.95550478560784,
+          "tokens_per_correct": 1834.5714285714287,
+          "limit_hits": 16,
+          "no_final_answer": 17
+        },
+        "artifact_sha256": {
+          "manifest.json": "b34867d929d87372a4c51c8d2f141ac6f6d4e497ff7ad10456f2561c473c1a45",
+          "launch.json": "7b2927f85b8b47cab8327fdd83262b6c48aa92941bf242b0421eda671472bbd8",
+          "process-status.json": "1789b24d78d2c1fa9055cde345377f1f983d62eaa1a81b23e719704496e6fe6d",
+          "results.jsonl": "4f672909a94551f69269e651073a6e22e42690017fd7cc2acbafd7e01bbb31d3",
+          "summary.json": "ff40c295006e1b65e154f7a816f838f8886266cb606844e5fda2002ce8059abf"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "prompt-concise": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "a4d39cdcc312d1b22f00052553f76123484c6c942fe80b76e953a0ae8124c3c1",
+          "case_ids": [
+            "041c58ac73e48f2daab6",
+            "04281fe296443d8a704c",
+            "042fef09efad3090f681",
+            "0437384a7c7591b1a738",
+            "0450826faa08d20e33bc",
+            "045e2373cc24d189cd69",
+            "0462f5ab348f2bef7aed",
+            "0465ab973142cb81b56a",
+            "048be0f7fd5645cba6f0",
+            "048eefaa11e0fb887b12",
+            "04e89fdaa1e900d6edc1",
+            "04fbc8a1a2f066245c86",
+            "05304c8194de00e06077",
+            "054ece40cabb9d8e9619",
+            "05befb9463cd3483627b",
+            "05c74cc3bf93630b6cc1",
+            "05d7a3a9f8a2369c574f",
+            "05ec6f6ac1776bff0766",
+            "0624eddddd8b513bd7cc",
+            "0653a0ed3fdab1276370",
+            "065469fc13b7709aa66c",
+            "0674f7860fe650bab170",
+            "06c7e818c1d42b3fa632",
+            "06fe9ab7bc6d7bc57835",
+            "071bac51d16c43496f5c",
+            "07287c7a93766c592d87",
+            "0768b378947bbcb81c27",
+            "07a411ab404a3c64334d",
+            "07d8f66764a3978684f6",
+            "07e793beb76b03628d1a",
+            "07ec2493170e5e5126f5",
+            "07ff07d8e9df568e7512"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+          "condition": "independent-validation-clover-math-integer-prompt-concise",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 21,
+          "accuracy": 0.65625,
+          "wall_seconds": 1368.3974112498108,
+          "generated_tokens": 16857,
+          "seconds_per_correct": 65.16178148808623,
+          "tokens_per_correct": 802.7142857142857,
+          "limit_hits": 9,
+          "no_final_answer": 9
+        },
+        "artifact_sha256": {
+          "manifest.json": "88faff690ee95ef003b207945a92806032e31b9c09d90611108b7287c0c3b27b",
+          "launch.json": "5ba67e1a15154ffab6f76767b9a02b38afbdab89a66ab636da950a92faa55d3d",
+          "process-status.json": "8123e72aed6da8c6129d1f1e6930e7dc8c6d8913c7a19c9f13aae1a5aedc9f99",
+          "results.jsonl": "d14f9d4e8e4335dfb7107059eba76a8b196ab1670d631c683e7fd714d28d7abe",
+          "summary.json": "e05d453355d76d3994cb494b59fe6242eabf0dfcc59ddb0781a8e65046b74826"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      }
+    },
+    "paired": [
+      {
+        "baseline": "original",
+        "candidate": "projection025",
+        "result": {
+          "baseline": {
+            "n": 32,
+            "correct": 15,
+            "accuracy": 0.46875,
+            "wall_seconds": 2081.432828207966,
+            "generated_tokens": 25909,
+            "seconds_per_correct": 138.76218854719772,
+            "tokens_per_correct": 1727.2666666666667,
+            "limit_hits": 15,
+            "no_final_answer": 16
+          },
+          "candidate": {
+            "n": 32,
+            "correct": 14,
+            "accuracy": 0.4375,
+            "wall_seconds": 2925.3770669985097,
+            "generated_tokens": 25684,
+            "seconds_per_correct": 208.95550478560784,
+            "tokens_per_correct": 1834.5714285714287,
+            "limit_hits": 16,
+            "no_final_answer": 17
+          },
+          "paired_accuracy_delta": -0.03125,
+          "bootstrap_95_interval": [
+            -0.09375,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 1,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "original",
+        "candidate": "requantize-only",
+        "result": {
+          "baseline": {
+            "n": 32,
+            "correct": 15,
+            "accuracy": 0.46875,
+            "wall_seconds": 2081.432828207966,
+            "generated_tokens": 25909,
+            "seconds_per_correct": 138.76218854719772,
+            "tokens_per_correct": 1727.2666666666667,
+            "limit_hits": 15,
+            "no_final_answer": 16
+          },
+          "candidate": {
+            "n": 32,
+            "correct": 13,
+            "accuracy": 0.40625,
+            "wall_seconds": 2236.915936666308,
+            "generated_tokens": 25974,
+            "seconds_per_correct": 172.07045666663907,
+            "tokens_per_correct": 1998.0,
+            "limit_hits": 17,
+            "no_final_answer": 18
+          },
+          "paired_accuracy_delta": -0.0625,
+          "bootstrap_95_interval": [
+            -0.15625,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 2,
+          "mcnemar_exact_two_sided_p": 0.5,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "requantize-only",
+        "candidate": "projection025",
+        "result": {
+          "baseline": {
+            "n": 32,
+            "correct": 13,
+            "accuracy": 0.40625,
+            "wall_seconds": 2236.915936666308,
+            "generated_tokens": 25974,
+            "seconds_per_correct": 172.07045666663907,
+            "tokens_per_correct": 1998.0,
+            "limit_hits": 17,
+            "no_final_answer": 18
+          },
+          "candidate": {
+            "n": 32,
+            "correct": 14,
+            "accuracy": 0.4375,
+            "wall_seconds": 2925.3770669985097,
+            "generated_tokens": 25684,
+            "seconds_per_correct": 208.95550478560784,
+            "tokens_per_correct": 1834.5714285714287,
+            "limit_hits": 16,
+            "no_final_answer": 17
+          },
+          "paired_accuracy_delta": 0.03125,
+          "bootstrap_95_interval": [
+            0.0,
+            0.09375
+          ],
+          "wins": 1,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      }
+    ],
+    "no_op": [],
+    "limitations": [
+      "Stored grades and measured timing are aggregated; no new inference or regrading.",
+      "Completion records and hashes are checked; model files are not rehashed by this read-only collector.",
+      "Small or selected development subsets do not establish held-out improvement."
+    ]
+  },
+  "supplementary_uncertainty": {
+    "schema": "wsp.supplementary-uncertainty/v1",
+    "source_bundle_sha256": "0ef2d58a8ac349c1a5f1d5bafac73eb25e25a59343efe4d89c38b7cbefa21fcf",
+    "analysis_code_sha256": "9b7e7925f1c4769a44ee20b3c4d46b25d4c97917c234f116c82cce6bcfe5f94c",
+    "comparisons": [
+      {
+        "n": 32,
+        "wins": 0,
+        "losses": 1,
+        "observed_delta": -0.03125,
+        "confidence": 0.95,
+        "interval": [
+          -0.18343510046636347,
+          0.12758299014538274
+        ],
+        "marginal_confidence": 0.975,
+        "win_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "loss_interval": [
+          0.0003930096954136708,
+          0.18343510046636347
+        ],
+        "baseline": "original",
+        "candidate": "projection025",
+        "frozen_bootstrap_interval": [
+          -0.09375,
+          0.0
+        ],
+        "frozen_mcnemar_p": 1.0
+      },
+      {
+        "n": 32,
+        "wins": 0,
+        "losses": 2,
+        "observed_delta": -0.0625,
+        "confidence": 0.95,
+        "interval": [
+          -0.2307075912726309,
+          0.12268440019650426
+        ],
+        "marginal_confidence": 0.975,
+        "win_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "loss_interval": [
+          0.005291599644292155,
+          0.2307075912726309
+        ],
+        "baseline": "original",
+        "candidate": "requantize-only",
+        "frozen_bootstrap_interval": [
+          -0.15625,
+          0.0
+        ],
+        "frozen_mcnemar_p": 0.5
+      },
+      {
+        "n": 32,
+        "wins": 1,
+        "losses": 0,
+        "observed_delta": 0.03125,
+        "confidence": 0.95,
+        "interval": [
+          -0.12758299014538274,
+          0.18343510046636347
+        ],
+        "marginal_confidence": 0.975,
+        "win_interval": [
+          0.0003930096954136708,
+          0.18343510046636347
+        ],
+        "loss_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "baseline": "requantize-only",
+        "candidate": "projection025",
+        "frozen_bootstrap_interval": [
+          0.0,
+          0.09375
+        ],
+        "frozen_mcnemar_p": 1.0
+      }
+    ],
+    "method": "Binomial-tail inversion for win/loss marginals, each at1-alpha/2 confidence; subtract endpoints using Bonferroni joint coverage.",
+    "references": [
+      "https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm",
+      "https://www.itl.nist.gov/div898/handbook/prc/section4/prc473.htm"
+    ],
+    "qualifications": [
+      "Supplementary sensitivity analysis; frozen bootstrap and McNemar outputs are retained, not replaced.",
+      "Coverage requires independent identically distributed problem pairs. Failure-selected development screens do not justify population inference.",
+      "This conservative interval is not a tight exact paired-risk-difference interval.",
+      "Confidence is per comparison, not adjusted across model, trial or benchmark families.",
+      "No new inference or regrading."
+    ]
+  },
+  "decision": "No projection improvement over original:15/32 original versus14/32 projection (wins0, losses1). Encoding-only is13/32; projection restores one correctness outcome relative to that drifted reference but remains below original. No quality, termination or efficiency gain is established. Original/encoding/projection cap hits15/17/16 and extraction failures16/18/17. Separate prompt control21/32 is not weight-space gain. Candidate remains a diagnostic No-go, not promoted to final.",
+  "complete_numeric_phase": {
+    "jobs": 16,
+    "requests": 456,
+    "generated_tokens": 212035,
+    "maximum_generated_tokens": 466944,
+    "all_managed_engines_completed_exit0_and_stopped": true,
+    "exact_live_engine_identity_matches": [],
+    "controller_elapsed_seconds_including_predecessor_wait": 17411.002558
+  },
+  "source_label_note": "Frozen comparator has a generic development label; actual split and plan qualification are train-derived validation. Runtime scorer remains unchanged.",
+  "limitations": [
+    "Quantized closed-thinking causal AR at cap1024, not BF16, official sampling, diffusion or full MATH.",
+    "Only one frozen candidate; small selected cohort and wide uncertainty do not establish population harm, equivalence or noninferiority.",
+    "Supplementary interval for projection minus original is approximately[-18.34pp,+12.76pp] under iid assumptions; no across-family correction is claimed.",
+    "Single-run timing is descriptive, not an efficiency qualification.",
+    "Semantic near-duplicate exclusion and pretraining-unseen status remain unqualified.",
+    "Native meter equivalence and cap diagnostic need separate follow-up; broader final/regression qualification remains open."
+  ]
+}

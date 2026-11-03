@@ -1,0 +1,261 @@
+{
+  "source_sha256": "e02a6c466e8f42aa32b984d03e846ec981ac6b5074cc651675ce056f9c2cf269",
+  "fixture_sha256": "56bfda3c9d1f0cea4a318fb5341ef5d5f9b19d6b4fd05d43ecc8c2024b89030f",
+  "qualification": "Artificial width8 40-layer CPU model only; not target-model or server-equivalence qualification",
+  "runs": {
+    "qwen": {
+      "command": [
+        "${EVIDENCE_ROOT}/meter-qwen-v2",
+        "-m",
+        "${EVIDENCE_ROOT}/capture-fixture.gguf",
+        "-c",
+        "256",
+        "-b",
+        "16",
+        "-ub",
+        "8",
+        "-ngl",
+        "0",
+        "-t",
+        "1",
+        "-tb",
+        "1",
+        "--poll",
+        "0",
+        "--flash-attn",
+        "off",
+        "--fit",
+        "off",
+        "-n",
+        "4"
+      ],
+      "binary_sha256": "ef4252c07b9b7ca0260b87be8d50227420d1993869f7d592b2d982cb5ddf7ba1",
+      "exit_code": 0,
+      "status": {
+        "completed_prompts": 3,
+        "prompt_tokens_submitted": 171,
+        "attempted_prefill_input_tokens": 171,
+        "attempted_decode_input_tokens": 9,
+        "token_cap": 4,
+        "temperature": 0,
+        "top_k": 1,
+        "seed": 42,
+        "n_batch_effective": 16,
+        "n_ubatch_effective": 8,
+        "n_ctx_effective": 256,
+        "sampled_including_eog": 12,
+        "emitted_tokens": 12,
+        "prefill_api_calls": 13,
+        "decode_api_calls": 9,
+        "prefill_graph_visits": 23,
+        "decode_graph_visits": 9,
+        "undeclared_graph_visits": 0,
+        "process_exit": 0
+      },
+      "generations": [
+        {
+          "prompt_index": 0,
+          "prompt_tokens": 5,
+          "sampled_including_eog": 4,
+          "emitted_tokens": 4,
+          "eog": false,
+          "prefill_api_calls": 1,
+          "decode_api_calls": 3,
+          "prefill_graph_visits": 1,
+          "decode_graph_visits": 3,
+          "api_exit": 0
+        },
+        {
+          "prompt_index": 1,
+          "prompt_tokens": 5,
+          "sampled_including_eog": 4,
+          "emitted_tokens": 4,
+          "eog": false,
+          "prefill_api_calls": 1,
+          "decode_api_calls": 3,
+          "prefill_graph_visits": 1,
+          "decode_graph_visits": 3,
+          "api_exit": 0
+        },
+        {
+          "prompt_index": 2,
+          "prompt_tokens": 161,
+          "sampled_including_eog": 4,
+          "emitted_tokens": 4,
+          "eog": false,
+          "prefill_api_calls": 11,
+          "decode_api_calls": 3,
+          "prefill_graph_visits": 21,
+          "decode_graph_visits": 3,
+          "api_exit": 0
+        }
+      ],
+      "identical_input_replay": true,
+      "engine_source_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b",
+      "linked_library_sha256": {
+        "libllama-common.dylib": "5e022069dbca82c0e3b7e26305b357507ff1c770b6e19abddd1be9fef98cc8e7",
+        "libllama.dylib": "c6e079e926056ff1b356522078a0101582de0af9c132d57ac9dcb9da132ba80d",
+        "libggml.dylib": "52ee0db97489e7815a202dd1e8e5bebff2429fcaf4280d6cc34a51c543015b10",
+        "libggml-base.dylib": "7db9d73d1946a85ea1ec3ac4a82da1ae44a9420428bd83fe609f36c02f7c3b81"
+      }
+    },
+    "clover": {
+      "command": [
+        "${EVIDENCE_ROOT}/meter-clover-v2",
+        "-m",
+        "${EVIDENCE_ROOT}/capture-fixture.gguf",
+        "-c",
+        "256",
+        "-b",
+        "16",
+        "-ub",
+        "8",
+        "-ngl",
+        "0",
+        "-t",
+        "1",
+        "-tb",
+        "1",
+        "--poll",
+        "0",
+        "--flash-attn",
+        "off",
+        "--fit",
+        "off",
+        "-n",
+        "4"
+      ],
+      "binary_sha256": "99a152a16bce0d225fbdedbd07a7da6dae796b47be4e3da998f97be8bd8096ea",
+      "exit_code": 0,
+      "status": {
+        "completed_prompts": 3,
+        "prompt_tokens_submitted": 171,
+        "attempted_prefill_input_tokens": 171,
+        "attempted_decode_input_tokens": 9,
+        "token_cap": 4,
+        "temperature": 0,
+        "top_k": 1,
+        "seed": 42,
+        "n_batch_effective": 16,
+        "n_ubatch_effective": 8,
+        "n_ctx_effective": 256,
+        "sampled_including_eog": 12,
+        "emitted_tokens": 12,
+        "prefill_api_calls": 13,
+        "decode_api_calls": 9,
+        "prefill_graph_visits": 23,
+        "decode_graph_visits": 9,
+        "undeclared_graph_visits": 0,
+        "process_exit": 0
+      },
+      "generations": [
+        {
+          "prompt_index": 0,
+          "prompt_tokens": 5,
+          "sampled_including_eog": 4,
+          "emitted_tokens": 4,
+          "eog": false,
+          "prefill_api_calls": 1,
+          "decode_api_calls": 3,
+          "prefill_graph_visits": 1,
+          "decode_graph_visits": 3,
+          "api_exit": 0
+        },
+        {
+          "prompt_index": 1,
+          "prompt_tokens": 5,
+          "sampled_including_eog": 4,
+          "emitted_tokens": 4,
+          "eog": false,
+          "prefill_api_calls": 1,
+          "decode_api_calls": 3,
+          "prefill_graph_visits": 1,
+          "decode_graph_visits": 3,
+          "api_exit": 0
+        },
+        {
+          "prompt_index": 2,
+          "prompt_tokens": 161,
+          "sampled_including_eog": 4,
+          "emitted_tokens": 4,
+          "eog": false,
+          "prefill_api_calls": 11,
+          "decode_api_calls": 3,
+          "prefill_graph_visits": 21,
+          "decode_graph_visits": 3,
+          "api_exit": 0
+        }
+      ],
+      "identical_input_replay": true,
+      "engine_source_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+      "linked_library_sha256": {
+        "libllama-common.dylib": "363a04380fcdb78bc3260ad0376faac6914ed96e8bd6091b9b867e0c0f61c4f0",
+        "libllama.dylib": "07aec6e1dba37b47e250033b4f9e374e9cb482dbb55a2c30883320e5bc49a0df",
+        "libggml.dylib": "3ac9820673dec744ba116b3713d88c197c093c6a9e6edfe855438b7cb106bdfe",
+        "libggml-base.dylib": "605ea92e963203cd181b97f85feba483ed02b4d029a09593eed07dc6e54f243f"
+      }
+    }
+  },
+  "guard_checks": [
+    {
+      "sdk": "qwen",
+      "case": "zero-cap",
+      "exit_code": 2,
+      "no_output": true
+    },
+    {
+      "sdk": "qwen",
+      "case": "over-cap",
+      "exit_code": 2,
+      "no_output": true
+    },
+    {
+      "sdk": "qwen",
+      "case": "speculative",
+      "exit_code": 2,
+      "no_output": true
+    },
+    {
+      "sdk": "qwen",
+      "case": "nonempty-output",
+      "exit_code": 2,
+      "artifacts_preserved": true
+    },
+    {
+      "sdk": "clover",
+      "case": "zero-cap",
+      "exit_code": 2,
+      "no_output": true
+    },
+    {
+      "sdk": "clover",
+      "case": "over-cap",
+      "exit_code": 2,
+      "no_output": true
+    },
+    {
+      "sdk": "clover",
+      "case": "speculative",
+      "exit_code": 2,
+      "no_output": true
+    },
+    {
+      "sdk": "clover",
+      "case": "nonempty-output",
+      "exit_code": 2,
+      "artifacts_preserved": true
+    }
+  ],
+  "issue": "JUN-799",
+  "date": "2026-11-04",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+  "limitations": [
+    "Artificial Llama width8/40-layer CPU model, not Qwen/Clover MoE/GDN generation qualification.",
+    "All fixture generations hit cap4; real end-of-generation behavior remains to be qualified.",
+    "First-layer graph visits are per-microbatch observations, not GPU kernels, GPU-seconds or server API calls.",
+    "Existing server-run forward totals are not measured retroactively by this helper.",
+    "Fixed greedy sampler profile ignores sampler CLI overrides; causal text-only, no adapter or speculative mode.",
+    "Synchronization/callback overhead makes this a separate instrumented runtime profile.",
+    "Before use for target scores, pin/check model and library hashes and qualify output equivalence to the server."
+  ]
+}

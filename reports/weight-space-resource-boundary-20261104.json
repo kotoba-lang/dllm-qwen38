@@ -1,0 +1,21 @@
+{
+  "issue": "JUN-798",
+  "checked_utc": "2026-11-03T16:23:31.003528+00:00",
+  "local_memory_bytes": 34359738368,
+  "known_remote_mac_memory_gib_from_prior_preflight": [
+    16,
+    16
+  ],
+  "known_gpu_peer_reported_online": false,
+  "observation_scope": "Tailnet status only for the previously identified GPU peer; no new SSH or fleet-wide capacity discovery. Remote Mac capacities are prior preflight values, not a new measurement.",
+  "bf16_qualification": "No usable BF16-capable host identified in the checked resources. Full weights plus state exceed the local32GiB host; main BF16 qualification remains open.",
+  "user_input": "Owner confirmed on2026-11-04 JST that only existing devices are available. Do not assume additional hardware or an unanswered capacity request.",
+  "changes": "Read-only capacity/status check. No host modification, service stop, paid provisioning, model transfer or external inference.",
+  "execution_boundary": "Continue qualified diagnostics on existing devices; BF16 main qualification remains resource-limited and unproven. No additional machine or paid provisioning is assumed.",
+  "latest_tailnet_recheck": {
+    "checked_utc": "2026-11-03T18:44:38.103249+00:00",
+    "known_gpu_peer_reported_online": false,
+    "last_seen_utc": "2026-10-25T19:15:09.1Z",
+    "scope": "Tailnet report only; not proof of physical power state."
+  }
+}

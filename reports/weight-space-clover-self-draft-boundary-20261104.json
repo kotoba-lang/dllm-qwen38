@@ -1,0 +1,64 @@
+{
+  "issue": "JUN-801",
+  "date": "2026-11-04",
+  "scope": "Pinned Clover SDK source and CLI parser audit only; no model load or inference.",
+  "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+  "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+  "source_file_sha256": {
+    "common/speculative.cpp": "e6bf0a7b751219f130ac0db7c1b7b7f9eccaef9c3336e48d59d2b324f9fa451a",
+    "common/arg.cpp": "5f5f1a5a0440a3cc7d517987c13d73a981930501f4b6eff3806f273dc2ffb8d9",
+    "tools/server/server-task.cpp": "9e52cb9eee85c26994695436c3bbc4a6d68afa430f6d38ae8886f4f189720a58",
+    "examples/speculative-simple/README.md": "a1e44976688be7f38a77c2ccd8ce19da343946c723f12840d1c97d7a490fb254"
+  },
+  "cli_probes": [
+    {
+      "args": [
+        "--spec-type",
+        "draft-self",
+        "--help"
+      ],
+      "exit": 0,
+      "relevant_lines": [
+        "--spec-type none,draft-simple,draft-eagle3,draft-mtp,draft-dflash,draft-dspark,ngram-simple,ngram-map-k,ngram-map-k4v,ngram-mod,ngram-cache,draft-self"
+      ]
+    },
+    {
+      "args": [
+        "--spec-accept-ratio",
+        "0.9",
+        "--help"
+      ],
+      "exit": 1,
+      "relevant_lines": [
+        "error: invalid argument: --spec-accept-ratio"
+      ]
+    }
+  ],
+  "source_observations": [
+    {
+      "location": "common/speculative.cpp:1499",
+      "finding": "draft-self uses the target context, builds a masked noncausal block, selects argmax draft tokens, then restores causal/recurrent/KV state. Failed drafting can fall back without a draft; successful generation alone does not prove drafting was active."
+    },
+    {
+      "location": "examples/speculative-simple/README.md:50",
+      "finding": "The documented Clover example uses llama-speculative-simple with n-max15, acceptance-ratio0.9, delta0.6 and BF16 KV; it is not a llama-server invocation."
+    },
+    {
+      "location": "common/arg.cpp:4195",
+      "finding": "Acceptance-ratio/delta CLI options are registered for the speculative example, while draft type/n-max also support the server. Actual server parser accepts draft-self with --help but rejects acceptance-ratio before any model load."
+    },
+    {
+      "location": "tools/server/server-task.cpp:1591",
+      "finding": "n_decode_total explicitly excludes speculative and multimodal work. Draft/accepted token and verification-step counters are separate and do not enumerate every internal forward graph."
+    }
+  ],
+  "qualification": "Static type/flag support is confirmed; target self-draft execution, output equivalence, acceptance behavior and complete compute accounting remain unqualified.",
+  "next_gate": [
+    "Do not label existing causal-AR benchmark results as diffusion/self-speculative results.",
+    "Before a self-draft quality/efficiency comparison, use an appropriate driver with explicitly pinned acceptance semantics, and count masked drafting plus causal verification and rollback work.",
+    "Require nonzero actual drafting/acceptance evidence and reject silent fallback as successful mode qualification.",
+    "Do not substitute server n_decode_total for total model forwards or GPU-seconds.",
+    "Existing meter.cpp rejects speculative mode and its queued target probes qualify only causal AR."
+  ],
+  "verification": "Two CLI-only parser probes completed (expected exit0 and exit1); no checkpoint, source, build or running validation configuration changed."
+}

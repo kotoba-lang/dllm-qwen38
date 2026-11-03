@@ -1,0 +1,176 @@
+{
+  "issue": "JUN-797 / JUN-800 / JUN-801",
+  "date": "2026-11-04",
+  "status": "frozen independent numerical validation protocol; no validation inference yet",
+  "protocol_sha256": "e1f6a1dc8613aec7cac53863d68bfdcf9c2dddfed55d3410bb588a31a20a0377",
+  "worker_sha256": "05a972514820f10530f2a3e04cf628569040b663e30ef36a52d3ffd1f3fa320a",
+  "source_sha256": {
+    "bench.py": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9",
+    "launch.py": "effe2a93a01240a68012c843e9420809c26068cb9ebfd75059e25f16824f71c5",
+    "collect.py": "34c7d3ca06fe63ce24f6c95e036e9a271bb8443b3e85e3186d74cb129d63a277"
+  },
+  "splits": {
+    "gsm8k": {
+      "n": 32,
+      "dev_validation_ids_disjoint": true,
+      "exact_question_sha_disjoint": true,
+      "plain_sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+      "concise_sha256": "6e19a1dab2aff4022b05bfe2b840ab5afd6c244c5e4473870249d7e3deddb2bd",
+      "case_ids_sha256": "cffb50380264fd81706323ff24084bc7e30d8f1adfb05b21d31005866364df28"
+    },
+    "math-integer": {
+      "n": 32,
+      "dev_validation_ids_disjoint": true,
+      "exact_question_sha_disjoint": true,
+      "plain_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+      "concise_sha256": "a4d39cdcc312d1b22f00052553f76123484c6c942fe80b76e953a0ae8124c3c1",
+      "case_ids_sha256": "e262a1baea5044a9e9e0583a6a22504a1060411613e01944d80244f8029ffe9f"
+    }
+  },
+  "jobs": [
+    {
+      "name": "qwen-rollback",
+      "n": 4,
+      "config_sha256": "34f1c856797b71ba22951d75434688402b4769c0581acc4b750e28a40e10ba1e",
+      "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+      "data_sha256": "035ab53d19ecbacdbfe50ca3ac6465ced97efa1df5311b78ecb9d8f39153c473",
+      "timeout": 1800
+    },
+    {
+      "name": "clover-rollback",
+      "n": 4,
+      "config_sha256": "0b450b5204f57271e8ca31082f3837b2cdfb933e375357172d8aab3d7637a959",
+      "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+      "timeout": 1800
+    },
+    {
+      "name": "qwen-gsm8k-original",
+      "n": 32,
+      "config_sha256": "adfe37c9be1e32ca2ccf71b9b63ce239683575a0d40fe65c8f2f983ea5d40b5d",
+      "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+      "data_sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+      "timeout": 5400
+    },
+    {
+      "name": "qwen-gsm8k-projection025",
+      "n": 32,
+      "config_sha256": "c57b56d78bc6be2ae8518a892e1aef7bc5355e4380f967e58a37e1ec8aa51ac8",
+      "model_sha256": "23f9178a90a986c65471108becabe0d96525dc65cb12161f4dcd72ea047cb109",
+      "data_sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+      "timeout": 5400
+    },
+    {
+      "name": "qwen-gsm8k-prompt-concise",
+      "n": 32,
+      "config_sha256": "2ebae0df1e27fa055d670d46e3b408cdfd53bfb842a57f83539e63edc0b88fab",
+      "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+      "data_sha256": "6e19a1dab2aff4022b05bfe2b840ab5afd6c244c5e4473870249d7e3deddb2bd",
+      "timeout": 5400
+    },
+    {
+      "name": "qwen-math-integer-original",
+      "n": 32,
+      "config_sha256": "7b058abdae04d42fc7234568480a492a0c228ba278d17809015f58a44499f1d0",
+      "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+      "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+      "timeout": 5400
+    },
+    {
+      "name": "qwen-math-integer-projection025",
+      "n": 32,
+      "config_sha256": "a09ecd2a9b95a8fe1934bf0b62fab6ef3a8ef285d9470a6930c25d7c48aeef96",
+      "model_sha256": "23f9178a90a986c65471108becabe0d96525dc65cb12161f4dcd72ea047cb109",
+      "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+      "timeout": 5400
+    },
+    {
+      "name": "qwen-math-integer-prompt-concise",
+      "n": 32,
+      "config_sha256": "ebdbef638336094f1fa5e598d99cdc6f9dedcac3f70d0c67ce2aa660d1f5485e",
+      "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+      "data_sha256": "a4d39cdcc312d1b22f00052553f76123484c6c942fe80b76e953a0ae8124c3c1",
+      "timeout": 5400
+    },
+    {
+      "name": "clover-gsm8k-original",
+      "n": 32,
+      "config_sha256": "0ff97b3e65d2eb2850decd24ade74886cc637c386ffc5ba8caaa5f1b2dd1c215",
+      "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "data_sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+      "timeout": 5400
+    },
+    {
+      "name": "clover-gsm8k-requantize-only",
+      "n": 32,
+      "config_sha256": "adb25b202905e22e91c85573afe398e48e138cff126e595f849339be75439677",
+      "model_sha256": "4b574153f571cf7305cbe1feafcc9c13c9fd8c5dd4dd6f44c1d797aa6048b99b",
+      "data_sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+      "timeout": 5400
+    },
+    {
+      "name": "clover-gsm8k-projection025",
+      "n": 32,
+      "config_sha256": "28c9072df71cfdd08091a2b0bf5b7e8014f4f9b235d068cd5cee7a4b1dcd8894",
+      "model_sha256": "87ed108a00aaea988e0b063af305d9c06df4ec90198ccf735781d8a8a055669d",
+      "data_sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+      "timeout": 5400
+    },
+    {
+      "name": "clover-gsm8k-prompt-concise",
+      "n": 32,
+      "config_sha256": "7bedce2487474cb3cd1d036aba0dcc46e5bf867f8b64e38446811d88204a8d91",
+      "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "data_sha256": "6e19a1dab2aff4022b05bfe2b840ab5afd6c244c5e4473870249d7e3deddb2bd",
+      "timeout": 5400
+    },
+    {
+      "name": "clover-math-integer-original",
+      "n": 32,
+      "config_sha256": "9a46114bfd5c5e695dc48b0017c843df9e490589cd7bfd7f375cce9fd24e0347",
+      "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+      "timeout": 5400
+    },
+    {
+      "name": "clover-math-integer-requantize-only",
+      "n": 32,
+      "config_sha256": "3040683a533917149906f82b8831fa4533e2125a0fb49b387b170a514b43435c",
+      "model_sha256": "4b574153f571cf7305cbe1feafcc9c13c9fd8c5dd4dd6f44c1d797aa6048b99b",
+      "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+      "timeout": 5400
+    },
+    {
+      "name": "clover-math-integer-projection025",
+      "n": 32,
+      "config_sha256": "3502fbc3ff5095a61e818183ab1a72bf8d117d38bf26bffb34c072cc2fa41202",
+      "model_sha256": "87ed108a00aaea988e0b063af305d9c06df4ec90198ccf735781d8a8a055669d",
+      "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+      "timeout": 5400
+    },
+    {
+      "name": "clover-math-integer-prompt-concise",
+      "n": 32,
+      "config_sha256": "8cfb978b8e5e7115581a716f0afe70204a17e77e991e7eb1044e7110a0405cb9",
+      "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "data_sha256": "a4d39cdcc312d1b22f00052553f76123484c6c942fe80b76e953a0ae8124c3c1",
+      "timeout": 5400
+    }
+  ],
+  "planned_generation_requests": 456,
+  "max_generated_tokens": 466944,
+  "post_predecessor_wall_budget_seconds": 21600,
+  "ordering": "Wait for verified live Clover v2 predecessor to terminate successfully, collect its complete controls, then run all new jobs serially. No overlapping large engines.",
+  "frozen_candidates": "Same single layer39 strength0.25 candidates as pilots; no new weight edit or tuning from validation. Qwen is not promoted to final evaluation.",
+  "comparisons": "Within each model and lane: original/projection/prompt-only, plus encoding-only for Clover; paired C/A and Clover C/encoding. Prompt-only scores remain separately attributed.",
+  "rollback": "Replay four unchanged development cases per model from original checkpoint after edits, requiring identical response text. Repeats are not new independent problems.",
+  "limitations": [
+    "GSM8K train-derived validation32 and selected hard integer MATH train-derived validation32 per model; original/projection/prompt-only and Clover encoding-only. No official test, code/Japanese/knowledge regression, BF16, or diffusion qualification.",
+    "Exact ID/question SHA disjointness is checked; semantic near-duplicate exclusion remains unqualified.",
+    "Keep individual validation questions, references and outputs out of editor-visible summaries; no further edits from them.",
+    "No GPU-seconds or complete generation graph count is claimed.",
+    "A validation result is not isolated final-test or full regression evidence.",
+    "Held out from edit development, with no guarantee of absence from model pretraining data.",
+    "Source precision is quantized, greedy, non-thinking causal AR. No official model-card score reproduction or population improvement claim."
+  ]
+}

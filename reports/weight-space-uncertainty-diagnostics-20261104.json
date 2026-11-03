@@ -1,0 +1,341 @@
+{
+  "issue": "JUN-799",
+  "date": "2026-11-04",
+  "status": "supplementary uncertainty diagnostics; frozen primary analysis unchanged",
+  "analyses": {
+    "qwen-pilot": {
+      "schema": "wsp.supplementary-uncertainty/v1",
+      "source_bundle_sha256": "88bc352a3335da58a2d3bf36879bb27bf22ca280fccc13c043c9b6fb81cad55f",
+      "analysis_code_sha256": "9b7e7925f1c4769a44ee20b3c4d46b25d4c97917c234f116c82cce6bcfe5f94c",
+      "comparisons": [
+        {
+          "n": 8,
+          "wins": 0,
+          "losses": 0,
+          "observed_delta": 0.0,
+          "confidence": 0.95,
+          "interval": [
+            -0.42175251622837895,
+            0.42175251622837895
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "loss_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "baseline": "baseline",
+          "candidate": "sham",
+          "frozen_bootstrap_interval": [
+            0.0,
+            0.0
+          ],
+          "frozen_mcnemar_p": 1.0
+        },
+        {
+          "n": 8,
+          "wins": 0,
+          "losses": 0,
+          "observed_delta": 0.0,
+          "confidence": 0.95,
+          "interval": [
+            -0.42175251622837895,
+            0.42175251622837895
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "loss_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "baseline": "baseline",
+          "candidate": "projection025",
+          "frozen_bootstrap_interval": [
+            0.0,
+            0.0
+          ],
+          "frozen_mcnemar_p": 1.0
+        },
+        {
+          "n": 8,
+          "wins": 0,
+          "losses": 0,
+          "observed_delta": 0.0,
+          "confidence": 0.95,
+          "interval": [
+            -0.42175251622837895,
+            0.42175251622837895
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "loss_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "baseline": "baseline",
+          "candidate": "random-matched",
+          "frozen_bootstrap_interval": [
+            0.0,
+            0.0
+          ],
+          "frozen_mcnemar_p": 1.0
+        }
+      ],
+      "method": "Binomial-tail inversion for win/loss marginals, each at1-alpha/2 confidence; subtract endpoints using Bonferroni joint coverage.",
+      "references": [
+        "https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm",
+        "https://www.itl.nist.gov/div898/handbook/prc/section4/prc473.htm"
+      ],
+      "qualifications": [
+        "Supplementary sensitivity analysis; frozen bootstrap and McNemar outputs are retained, not replaced.",
+        "Coverage requires independent identically distributed problem pairs. Failure-selected development screens do not justify population inference.",
+        "This conservative interval is not a tight exact paired-risk-difference interval.",
+        "Confidence is per comparison, not adjusted across model, trial or benchmark families.",
+        "No new inference or regrading."
+      ]
+    },
+    "clover-pilot": {
+      "schema": "wsp.supplementary-uncertainty/v1",
+      "source_bundle_sha256": "47319789c7b1011d0d12e7daa2acd345ae7594f036eb39ebe0e1fa99ff9d31b3",
+      "analysis_code_sha256": "9b7e7925f1c4769a44ee20b3c4d46b25d4c97917c234f116c82cce6bcfe5f94c",
+      "comparisons": [
+        {
+          "n": 8,
+          "wins": 0,
+          "losses": 0,
+          "observed_delta": 0.0,
+          "confidence": 0.95,
+          "interval": [
+            -0.42175251622837895,
+            0.42175251622837895
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "loss_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "baseline": "baseline",
+          "candidate": "no-op",
+          "frozen_bootstrap_interval": [
+            0.0,
+            0.0
+          ],
+          "frozen_mcnemar_p": 1.0
+        },
+        {
+          "n": 8,
+          "wins": 1,
+          "losses": 0,
+          "observed_delta": 0.125,
+          "confidence": 0.95,
+          "interval": [
+            -0.4201814039436601,
+            0.5754500196169425
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0015711122847188452,
+            0.5754500196169425
+          ],
+          "loss_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "baseline": "baseline",
+          "candidate": "requantize-only",
+          "frozen_bootstrap_interval": [
+            0.0,
+            0.375
+          ],
+          "frozen_mcnemar_p": 1.0
+        },
+        {
+          "n": 8,
+          "wins": 0,
+          "losses": 0,
+          "observed_delta": 0.0,
+          "confidence": 0.95,
+          "interval": [
+            -0.42175251622837895,
+            0.42175251622837895
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "loss_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "baseline": "baseline",
+          "candidate": "projection025",
+          "frozen_bootstrap_interval": [
+            0.0,
+            0.0
+          ],
+          "frozen_mcnemar_p": 1.0
+        },
+        {
+          "n": 8,
+          "wins": 1,
+          "losses": 0,
+          "observed_delta": 0.125,
+          "confidence": 0.95,
+          "interval": [
+            -0.4201814039436601,
+            0.5754500196169425
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0015711122847188452,
+            0.5754500196169425
+          ],
+          "loss_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "baseline": "baseline",
+          "candidate": "random-increment-matched",
+          "frozen_bootstrap_interval": [
+            0.0,
+            0.375
+          ],
+          "frozen_mcnemar_p": 1.0
+        },
+        {
+          "n": 8,
+          "wins": 0,
+          "losses": 1,
+          "observed_delta": -0.125,
+          "confidence": 0.95,
+          "interval": [
+            -0.5754500196169425,
+            0.4201814039436601
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "loss_interval": [
+            0.0015711122847188452,
+            0.5754500196169425
+          ],
+          "baseline": "requantize-only",
+          "candidate": "projection025",
+          "frozen_bootstrap_interval": [
+            -0.375,
+            0.0
+          ],
+          "frozen_mcnemar_p": 1.0
+        },
+        {
+          "n": 8,
+          "wins": 0,
+          "losses": 0,
+          "observed_delta": 0.0,
+          "confidence": 0.95,
+          "interval": [
+            -0.42175251622837895,
+            0.42175251622837895
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "loss_interval": [
+            0.0,
+            0.42175251622837895
+          ],
+          "baseline": "requantize-only",
+          "candidate": "random-increment-matched",
+          "frozen_bootstrap_interval": [
+            0.0,
+            0.0
+          ],
+          "frozen_mcnemar_p": 1.0
+        }
+      ],
+      "method": "Binomial-tail inversion for win/loss marginals, each at1-alpha/2 confidence; subtract endpoints using Bonferroni joint coverage.",
+      "references": [
+        "https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm",
+        "https://www.itl.nist.gov/div898/handbook/prc/section4/prc473.htm"
+      ],
+      "qualifications": [
+        "Supplementary sensitivity analysis; frozen bootstrap and McNemar outputs are retained, not replaced.",
+        "Coverage requires independent identically distributed problem pairs. Failure-selected development screens do not justify population inference.",
+        "This conservative interval is not a tight exact paired-risk-difference interval.",
+        "Confidence is per comparison, not adjusted across model, trial or benchmark families.",
+        "No new inference or regrading."
+      ]
+    },
+    "qwen-gsm8k-validation": {
+      "schema": "wsp.supplementary-uncertainty/v1",
+      "source_bundle_sha256": "91368101be0329b824a84cb71003851b251b74ba4a7d67fa1904d6acf9802634",
+      "analysis_code_sha256": "9b7e7925f1c4769a44ee20b3c4d46b25d4c97917c234f116c82cce6bcfe5f94c",
+      "comparisons": [
+        {
+          "n": 32,
+          "wins": 0,
+          "losses": 0,
+          "observed_delta": 0.0,
+          "confidence": 0.95,
+          "interval": [
+            -0.1279759998407964,
+            0.1279759998407964
+          ],
+          "marginal_confidence": 0.975,
+          "win_interval": [
+            0.0,
+            0.1279759998407964
+          ],
+          "loss_interval": [
+            0.0,
+            0.1279759998407964
+          ],
+          "baseline": "original",
+          "candidate": "projection025",
+          "frozen_bootstrap_interval": [
+            0.0,
+            0.0
+          ],
+          "frozen_mcnemar_p": 1.0
+        }
+      ],
+      "method": "Binomial-tail inversion for win/loss marginals, each at1-alpha/2 confidence; subtract endpoints using Bonferroni joint coverage.",
+      "references": [
+        "https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm",
+        "https://www.itl.nist.gov/div898/handbook/prc/section4/prc473.htm"
+      ],
+      "qualifications": [
+        "Supplementary sensitivity analysis; frozen bootstrap and McNemar outputs are retained, not replaced.",
+        "Coverage requires independent identically distributed problem pairs. Failure-selected development screens do not justify population inference.",
+        "This conservative interval is not a tight exact paired-risk-difference interval.",
+        "Confidence is per comparison, not adjusted across model, trial or benchmark families.",
+        "No new inference or regrading."
+      ]
+    }
+  },
+  "verification": [
+    "NIST4/20 exact90% equations checked with independent60-digit Decimal tails (<1e-12 residual); published approximate roots agree within1e-6.",
+    "SciPy official7/50 exact95% example agrees within1e-10.",
+    "Zero/all-boundary formulas at n1/8/32/500, direction-swap symmetry, invalid counts/confidence, and small multinomial coverage grid pass."
+  ],
+  "calibration_note": "The NIST page lists approximate upper0.401029; tail inversion yields0.40102811733197485 with Decimal residual about-1.88e-16. Treat that published root as approximate.",
+  "decision": "Observed identical correctness is not evidence of a narrow noninferiority bound. This additional conservative construction does not replace frozen bootstrap/McNemar statistics or create a population claim for selected development cases."
+}
