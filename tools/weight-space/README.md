@@ -129,7 +129,9 @@ The collector adds scorer-revision and launch-profile checks beyond the current 
 WSP_METER_DIR=/absolute/evidence/meter-output \
 WSP_METER_LIST=/absolute/evidence/prompt-files.txt \
   /absolute/meter-binary -m /absolute/verified-model.gguf \
-  -c4096 -b512 -ub256 -ngl99 -t6 -tb6 --flash-attn on --fit off -n16
+  -c 4096 -b 512 -ub 256 -ngl 99 -t 6 -tb 6 --flash-attn on --fit off -n 16
 ```
 
 The helper saves raw content bytes, sampled token IDs (including EOG), per-call trace and per-input/overall counts. Prefill API calls, single-token decode API calls, sampled/emitted tokens and observed `attn_norm-0` graph visits are distinct fields. Each call is synchronized and times host wall duration; this is not GPU-seconds. Any call without the expected graph marker or graph outside a declared call invalidates completion. Its artificial CPU fixture checks with both pinned SDKs used13 prefill calls/23 graphs plus9 decode calls/9 graphs, while emitting12 tokens across three inputs; identical-input replay matched. Caps outside1..1024, speculative mode and nonempty output were rejected. These checks do not qualify target MoE/GDN generation or equivalence to the HTTP server. The callback/synchronization also changes the timing profile. See [the meter fixture report](../../reports/weight-space-native-meter-fixture-20261104.json).
+
+The completed Clover hard-integer MATH selected-development screen scored2/8 original,2/8 true no-op,3/8 encoding-only,2/8 projection and3/8 norm-matched random. The no-op response text matches on all eight inputs. The projection has zero paired wins and one loss vs encoding-only. A separate concise-prompt condition scores7/8 with3390 tokens and no cap hits, but predicts614 instead of240 on one geometry case. The frozen projection candidate is not promoted to final evaluation; separately fixed validation measures its independent effects without further tuning. Full provenance and limitations are in [the Clover pilot report](../../reports/weight-space-clover-pilot-20261104.json).

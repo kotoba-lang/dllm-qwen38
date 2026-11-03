@@ -1,0 +1,794 @@
+{
+  "issue": "JUN-801",
+  "date": "2026-11-04",
+  "status": "completed six-condition Clover exploratory development pilot",
+  "cohort": "Eight selected hard integer-answer MATH train development problems; three direction-source problems overlap the screen.",
+  "bundle_sha256": "47319789c7b1011d0d12e7daa2acd345ae7594f036eb39ebe0e1fa99ff9d31b3",
+  "bundle": {
+    "schema": "wsp.completed-run-bundle/v1",
+    "plan_sha256": "eb16db75cd34e6350770fa809900174ba7653a148ee14cbed8ab7e0c7ea9d1ce",
+    "collector_sha256": "34c7d3ca06fe63ce24f6c95e036e9a271bb8443b3e85e3186d74cb129d63a277",
+    "comparison_code_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9",
+    "qualification": "failure-selected development screen; no held-out improvement estimate",
+    "runs": {
+      "baseline": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+          "case_ids": [
+            "000f1abde922ab8c0004",
+            "005bd82447f9945a2b87",
+            "00ca5df429d4dd9925aa",
+            "010929c71f83399ac2f2",
+            "03473ca2121a8b3bf0c7",
+            "039cb93f5116397c47c7",
+            "0415204aac1b37e30844",
+            "04165c8e50f8574d5d57"
+          ],
+          "split": "exploratory-dev-selected-screen",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+          "condition": "clover-v2-screen-baseline",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 8,
+          "correct": 2,
+          "accuracy": 0.25,
+          "wall_seconds": 705.2043308741413,
+          "generated_tokens": 7579,
+          "seconds_per_correct": 352.60216543707065,
+          "tokens_per_correct": 3789.5,
+          "limit_hits": 6,
+          "no_final_answer": 6
+        },
+        "artifact_sha256": {
+          "manifest.json": "660e72bfd2c90de400b400c72a78ba358940e344a535ecce88b55065988ac263",
+          "launch.json": "75b643c6cb710996a7000e0096c62eea072bbaec5732aa2b669f217ea5f88305",
+          "process-status.json": "52bbd937076d5363b8e33c1000a6943c2d050d720fd75569fa70bdd7e9f8e126",
+          "results.jsonl": "954296bcb511f50c76c698f2a135258da042bae71198eb682f088743edc27924",
+          "summary.json": "3ff564584ac61ad933af088e7348b929236a179c46976af23d9c1eb1edc962e6"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "no-op": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+          "case_ids": [
+            "000f1abde922ab8c0004",
+            "005bd82447f9945a2b87",
+            "00ca5df429d4dd9925aa",
+            "010929c71f83399ac2f2",
+            "03473ca2121a8b3bf0c7",
+            "039cb93f5116397c47c7",
+            "0415204aac1b37e30844",
+            "04165c8e50f8574d5d57"
+          ],
+          "split": "exploratory-dev-selected-screen",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+          "condition": "clover-v2-screen-no-op",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 8,
+          "correct": 2,
+          "accuracy": 0.25,
+          "wall_seconds": 764.3252087912988,
+          "generated_tokens": 7579,
+          "seconds_per_correct": 382.1626043956494,
+          "tokens_per_correct": 3789.5,
+          "limit_hits": 6,
+          "no_final_answer": 6
+        },
+        "artifact_sha256": {
+          "manifest.json": "968deb840f3d16135ba84036b9675486e1e6dbe30ae5aad4cc3adf9110e9163f",
+          "launch.json": "ac5f54c60a5a5c9dc639c54d2cda4866b074dfdedae56d92ac4672db7164e1ca",
+          "process-status.json": "4fa40bfb60754cd47d34be31b7d15547c3a4c6376028b7ba034a7e60925e1736",
+          "results.jsonl": "95ec86095adf02b1f7954d70bb331a5846ac3c306fdba1610b7ebe8588897411",
+          "summary.json": "012050e58baa21c9fb8693e91ef408b8babdee6812dfdb66a9b42abdaf12f119"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "requantize-only": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+          "case_ids": [
+            "000f1abde922ab8c0004",
+            "005bd82447f9945a2b87",
+            "00ca5df429d4dd9925aa",
+            "010929c71f83399ac2f2",
+            "03473ca2121a8b3bf0c7",
+            "039cb93f5116397c47c7",
+            "0415204aac1b37e30844",
+            "04165c8e50f8574d5d57"
+          ],
+          "split": "exploratory-dev-selected-screen",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "4b574153f571cf7305cbe1feafcc9c13c9fd8c5dd4dd6f44c1d797aa6048b99b",
+          "condition": "clover-v2-screen-requantize-only",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 8,
+          "correct": 3,
+          "accuracy": 0.375,
+          "wall_seconds": 538.9313796656206,
+          "generated_tokens": 7579,
+          "seconds_per_correct": 179.64379322187355,
+          "tokens_per_correct": 2526.3333333333335,
+          "limit_hits": 6,
+          "no_final_answer": 5
+        },
+        "artifact_sha256": {
+          "manifest.json": "a8d2fd2f1464a5b6a429fb52620047c83977ca962a39ac9b8cc3f40f71c86056",
+          "launch.json": "ad83c3685aa0241a50a13fbd0a4890955a3492ade099ae7e9eb565aa65b0254a",
+          "process-status.json": "4297278087f9252523b7c6bfaa8286d050a970223bc8d76077843bb18eeceac2",
+          "results.jsonl": "aca87d80d15807efc59a33dff5f71f321a4b9674f93b77e0088e795d23fa9eab",
+          "summary.json": "54d5ef923924157b23b81688d6e6e45b933f91af81630e4b4c886ee5c5d9368c"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "projection025": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+          "case_ids": [
+            "000f1abde922ab8c0004",
+            "005bd82447f9945a2b87",
+            "00ca5df429d4dd9925aa",
+            "010929c71f83399ac2f2",
+            "03473ca2121a8b3bf0c7",
+            "039cb93f5116397c47c7",
+            "0415204aac1b37e30844",
+            "04165c8e50f8574d5d57"
+          ],
+          "split": "exploratory-dev-selected-screen",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "87ed108a00aaea988e0b063af305d9c06df4ec90198ccf735781d8a8a055669d",
+          "condition": "clover-v2-screen-projection025",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 8,
+          "correct": 2,
+          "accuracy": 0.25,
+          "wall_seconds": 500.8504325840622,
+          "generated_tokens": 7579,
+          "seconds_per_correct": 250.4252162920311,
+          "tokens_per_correct": 3789.5,
+          "limit_hits": 6,
+          "no_final_answer": 6
+        },
+        "artifact_sha256": {
+          "manifest.json": "a645e4af093fe51bd4e77e26da26a7eddfae25ea25e89e1300e74d91ad05d30f",
+          "launch.json": "d0d7a8f1bdfaf164cab5d18e0ffd7e8ebaf0c5bc54177dc0cf1e0e7526d4904c",
+          "process-status.json": "bc72621e4b9e1dbfa37ececd99ea9bbe17e59e62c6f7c154d56eefa064cca678",
+          "results.jsonl": "db3f7db847f18ef926cc84404fb5f7c94417acb8cde21f293c3c5c7a8a84323f",
+          "summary.json": "5ba06ca66f03e32eaed1a40870d1b3c0f973ee91c7a6cc6a3488a111576e6d3e"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "random-increment-matched": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+          "case_ids": [
+            "000f1abde922ab8c0004",
+            "005bd82447f9945a2b87",
+            "00ca5df429d4dd9925aa",
+            "010929c71f83399ac2f2",
+            "03473ca2121a8b3bf0c7",
+            "039cb93f5116397c47c7",
+            "0415204aac1b37e30844",
+            "04165c8e50f8574d5d57"
+          ],
+          "split": "exploratory-dev-selected-screen",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "b02befab9634f7b9f26bdb22654553f701eb9ec98e780f65db003da8a851914f",
+          "condition": "clover-v2-screen-random-increment-matched",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 8,
+          "correct": 3,
+          "accuracy": 0.375,
+          "wall_seconds": 858.8288722499274,
+          "generated_tokens": 7530,
+          "seconds_per_correct": 286.2762907499758,
+          "tokens_per_correct": 2510.0,
+          "limit_hits": 6,
+          "no_final_answer": 5
+        },
+        "artifact_sha256": {
+          "manifest.json": "bb52eac0a1ccb5918d6a7d370cb12c1bba5db816e2504fad3affc2b877c5cc18",
+          "launch.json": "12dfe990b36b713c85b73158853d7aa5e0b02ec22e51b76171ac230505162173",
+          "process-status.json": "626546d6437da09e8e0bcae0b5edde237b32f46e513d243a1553fc558b882790",
+          "results.jsonl": "779310aab52f2b5faca07569d74cd8967282867dd6f26cb979a4a3e422cf506c",
+          "summary.json": "e37a0c90814df0c949f6592d8442e65a00877ca2b7f8e313f11da7984d5ff381"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "prompt-concise": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "fbb5bb8c8b55a685e33fa3a1764616e225c02b4ff9ca59b3149a844793611f9d",
+          "case_ids": [
+            "000f1abde922ab8c0004",
+            "005bd82447f9945a2b87",
+            "00ca5df429d4dd9925aa",
+            "010929c71f83399ac2f2",
+            "03473ca2121a8b3bf0c7",
+            "039cb93f5116397c47c7",
+            "0415204aac1b37e30844",
+            "04165c8e50f8574d5d57"
+          ],
+          "split": "exploratory-dev-selected-screen",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+          "condition": "clover-v2-screen-prompt-concise",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 8,
+          "correct": 7,
+          "accuracy": 0.875,
+          "wall_seconds": 420.93127258494496,
+          "generated_tokens": 3390,
+          "seconds_per_correct": 60.13303894070642,
+          "tokens_per_correct": 484.2857142857143,
+          "limit_hits": 0,
+          "no_final_answer": 0
+        },
+        "artifact_sha256": {
+          "manifest.json": "5c4030f2d8f97c004e5295bfa62c98d9e42cc9f020f05cec5b605b2467e95752",
+          "launch.json": "c9313f956effbe7879ac3f3e4246b1570de44f984dbf28cdc997f583f6e97b96",
+          "process-status.json": "43119d5717b5afebe0f5f2eeabee73afae3a3be3ee795b0e7e66012ae8dc0023",
+          "results.jsonl": "19f42c3f84e928485b9562025fd7122329b286136d8c587c391458324feb2fdd",
+          "summary.json": "6e3b49689acbf4aa7256b8035eb35479a3b60331767aaaa30825f25564eb6b27"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      }
+    },
+    "paired": [
+      {
+        "baseline": "baseline",
+        "candidate": "no-op",
+        "result": {
+          "baseline": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 705.2043308741413,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 352.60216543707065,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "candidate": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 764.3252087912988,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 382.1626043956494,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "paired_accuracy_delta": 0.0,
+          "bootstrap_95_interval": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "baseline",
+        "candidate": "requantize-only",
+        "result": {
+          "baseline": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 705.2043308741413,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 352.60216543707065,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "candidate": {
+            "n": 8,
+            "correct": 3,
+            "accuracy": 0.375,
+            "wall_seconds": 538.9313796656206,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 179.64379322187355,
+            "tokens_per_correct": 2526.3333333333335,
+            "limit_hits": 6,
+            "no_final_answer": 5
+          },
+          "paired_accuracy_delta": 0.125,
+          "bootstrap_95_interval": [
+            0.0,
+            0.375
+          ],
+          "wins": 1,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "baseline",
+        "candidate": "projection025",
+        "result": {
+          "baseline": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 705.2043308741413,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 352.60216543707065,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "candidate": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 500.8504325840622,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 250.4252162920311,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "paired_accuracy_delta": 0.0,
+          "bootstrap_95_interval": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "baseline",
+        "candidate": "random-increment-matched",
+        "result": {
+          "baseline": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 705.2043308741413,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 352.60216543707065,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "candidate": {
+            "n": 8,
+            "correct": 3,
+            "accuracy": 0.375,
+            "wall_seconds": 858.8288722499274,
+            "generated_tokens": 7530,
+            "seconds_per_correct": 286.2762907499758,
+            "tokens_per_correct": 2510.0,
+            "limit_hits": 6,
+            "no_final_answer": 5
+          },
+          "paired_accuracy_delta": 0.125,
+          "bootstrap_95_interval": [
+            0.0,
+            0.375
+          ],
+          "wins": 1,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "requantize-only",
+        "candidate": "projection025",
+        "result": {
+          "baseline": {
+            "n": 8,
+            "correct": 3,
+            "accuracy": 0.375,
+            "wall_seconds": 538.9313796656206,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 179.64379322187355,
+            "tokens_per_correct": 2526.3333333333335,
+            "limit_hits": 6,
+            "no_final_answer": 5
+          },
+          "candidate": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 500.8504325840622,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 250.4252162920311,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "paired_accuracy_delta": -0.125,
+          "bootstrap_95_interval": [
+            -0.375,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 1,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "requantize-only",
+        "candidate": "random-increment-matched",
+        "result": {
+          "baseline": {
+            "n": 8,
+            "correct": 3,
+            "accuracy": 0.375,
+            "wall_seconds": 538.9313796656206,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 179.64379322187355,
+            "tokens_per_correct": 2526.3333333333335,
+            "limit_hits": 6,
+            "no_final_answer": 5
+          },
+          "candidate": {
+            "n": 8,
+            "correct": 3,
+            "accuracy": 0.375,
+            "wall_seconds": 858.8288722499274,
+            "generated_tokens": 7530,
+            "seconds_per_correct": 286.2762907499758,
+            "tokens_per_correct": 2510.0,
+            "limit_hits": 6,
+            "no_final_answer": 5
+          },
+          "paired_accuracy_delta": 0.0,
+          "bootstrap_95_interval": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      }
+    ],
+    "no_op": [
+      {
+        "baseline": "baseline",
+        "candidate": "no-op",
+        "checkpoint_hash_equal": true,
+        "exact_response_text_matches": 8,
+        "n": 8
+      }
+    ],
+    "limitations": [
+      "Stored grades and measured timing are aggregated; no new inference or regrading.",
+      "Completion records and hashes are checked; model files are not rehashed by this read-only collector.",
+      "Small or selected development subsets do not establish held-out improvement."
+    ]
+  },
+  "accounting": {
+    "generation_requests": 48,
+    "generated_tokens": 41236,
+    "observation_prefill_api_calls": 8,
+    "observation_prompt_tokens": 7734,
+    "observation_first_layer_graph_visits": 64,
+    "total_generation_and_observation_api_requests": 56,
+    "full_generation_graph_count": null,
+    "gpu_seconds": null
+  },
+  "decision": {
+    "projection": "No development accuracy or token-budget benefit vs original (2/8 each). Loses one correct case vs encoding-only (3/8), with zero paired wins and one loss. Do not promote this candidate to final evaluation.",
+    "random": "Matches encoding-only correctness (3/8); no direction-specific gain established.",
+    "prompt": "7/8,3390 tokens,zero cap hits; separate prompt-only effect, not a weight-space gain. One numeric disagreement remains: stripe case04165c8e50f8574d5d57 predicts614 vs expected240.",
+    "independent_phase": "The same frozen candidates will be measured on separately fixed numerical validation; no further edits or candidate promotion from these outputs."
+  },
+  "limitations": [
+    "Failure-selected n8; not held-out accuracy or a general rejection of weight-space programming.",
+    "Quantized greedy non-thinking causal AR, not BF16, official recommended sampling, diffusion/self-speculative or full regression qualification.",
+    "Six cap hits remain for original, encoding-only, projection and random. The encoding-only/random extra correct answer is earlier FINAL formatting in the same cap.",
+    "Single-run wall-time differences are descriptive; repeated timing and GPU-seconds are absent, so no efficiency gain is qualified.",
+    "Empirical bootstrap intervals on eight selected pairs can be degenerate and do not establish population equivalence.",
+    "Official final test and code/Japanese/knowledge regression suites remain unused/unqualified."
+  ]
+}
