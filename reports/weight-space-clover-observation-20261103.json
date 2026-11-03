@@ -1,0 +1,103 @@
+{
+  "issue": "JUN-801",
+  "status": "completed native Clover residual observation; weight comparison pending",
+  "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+  "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+  "protocol_sha256": "2352ad268271986147c8e65f6582bdf5e315cc8c957d3a88ac030f6125cd7b97",
+  "worker_sha256": "1a09f2b2716c9740ce5612364ef03070e42969bea1c2c7962c0502908c62651d",
+  "capture_implementation": {
+    "binary_sha256": "429c2d1ccf20421b889b4ce0307133902b054932560ea8aabd6f41d39f240849",
+    "source_sha256": "97464a5b3c0a435d97e8b5d8d5d86d49daf812161d482b5328d21459a365ea29",
+    "manifest_sha256": "2352ad268271986147c8e65f6582bdf5e315cc8c957d3a88ac030f6125cd7b97",
+    "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+    "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5"
+  },
+  "observation": {
+    "capture_status": {
+      "prefill_api_calls": 8,
+      "prompt_tokens": 7734,
+      "first_layer_graph_visits": 64,
+      "generated_tokens": 0,
+      "captured_tensors": 192,
+      "process_exit": 0,
+      "capture_failed": false
+    },
+    "loader_accounting": {
+      "capture_status": {
+        "prefill_api_calls": 8,
+        "prompt_tokens": 7734,
+        "first_layer_graph_visits": 64,
+        "generated_tokens": 0,
+        "captured_tensors": 192,
+        "process_exit": 0,
+        "capture_failed": false
+      },
+      "empty_microbatch_outputs": 56,
+      "nonempty_final_vectors": 24
+    },
+    "layers": {
+      "31": {
+        "pair_delta_norms": [
+          6.649959564208984,
+          7.010865688323975,
+          5.44474458694458
+        ],
+        "pair_cosines": [
+          0.45818567276000977,
+          0.19933219254016876,
+          0.23225754499435425
+        ],
+        "mean_pair_cosine": 0.2965918034315109,
+        "reset_control_max_abs": 0.0
+      },
+      "35": {
+        "pair_delta_norms": [
+          11.13910961151123,
+          11.434687614440918,
+          8.745044708251953
+        ],
+        "pair_cosines": [
+          0.5088909864425659,
+          0.22705407440662384,
+          0.22429004311561584
+        ],
+        "mean_pair_cosine": 0.32007836798826855,
+        "reset_control_max_abs": 0.0
+      },
+      "39": {
+        "pair_delta_norms": [
+          14.736563682556152,
+          18.397377014160156,
+          14.214801788330078
+        ],
+        "pair_cosines": [
+          0.48046791553497314,
+          0.03312462940812111,
+          0.015891756862401962
+        ],
+        "mean_pair_cosine": 0.17649476726849875,
+        "reset_control_max_abs": 0.0
+      }
+    }
+  },
+  "loader_recheck": {
+    "capture_status": {
+      "prefill_api_calls": 8,
+      "prompt_tokens": 7734,
+      "first_layer_graph_visits": 64,
+      "generated_tokens": 0,
+      "captured_tensors": 192,
+      "process_exit": 0,
+      "capture_failed": false
+    },
+    "empty_microbatch_outputs": 56,
+    "nonempty_final_vectors": 24
+  },
+  "selection": "Same predeclared layer39 rule as Qwen, using Clover-specific vectors, with no direction or tensor delta copied between models.",
+  "limitations": [
+    "Teacher-forced development prefixes, not exact original-token history replay.",
+    "Layer39 mean driven largely by one pair (cosines 0.4805, 0.0331, 0.0159); weak association may reflect length/position/format confounding.",
+    "Passing the predeclared mean gate permits a pilot; it does not establish causal obstruction or gain.",
+    "Causal AR observation only; diffusion/self-speculative and BF16 remain unqualified."
+  ]
+}
