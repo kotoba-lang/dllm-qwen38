@@ -13,6 +13,16 @@ python3 tools/weight-space/bench.py prepare --output /absolute/evidence/data --s
 python3 tools/weight-space/test_bench.py
 ```
 
+An optional harder development lane uses only MATH train problems at level 4/5 with one plain integer boxed answer. It downloads no test split and uses the same runner/scorer. This selected subset does not represent full MATH accuracy. Its preparation needs `pyarrow==22.0.0`; inference and comparison still use only the standard library.
+
+```sh
+/absolute/task-venv/bin/python -m pip install pyarrow==22.0.0
+/absolute/task-venv/bin/python tools/weight-space/prepare_math.py \
+  --output /absolute/evidence/math-data --size 32
+```
+
+The source is `EleutherAI/hendrycks_math` at revision `21a5633873b6a120296cce3e2df9d5550074f4a3`; output files record the checksum of each downloaded train shard. Both lanes are chosen before looking at model scores.
+
 ## Start the pinned engine
 
 Build a llama.cpp revision that contains Clover support (PR 31306). The initial source revision inspected was `749db7f034d43d6de01a01f6d8c872d02afa6c7b`. Record the build options, version, launch command, and logs in the evidence directory. Use only the selected checkpoint; do not run multiple large checkpoints concurrently on a memory-constrained host.
