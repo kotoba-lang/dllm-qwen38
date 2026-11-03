@@ -67,3 +67,16 @@ python3 tools/weight-space/bench.py compare \
 Comparison requires complete, matching case lists and generation conditions. It reports paired wins/losses, a problem-level bootstrap interval, exact McNemar p, tokens, and wall time per correct answer. A 32-problem development experiment cannot establish the parent's +3 percentage point improvement target. Select a candidate on validation, freeze it, then use the isolated final evaluation and regression tasks in JUN-802. A decode-only comparison has different generation settings and must be reported separately rather than passed off as a paired weight-only change.
 
 All raw run files and downloaded weights stay outside Git under the task evidence workspace. Commit only code and compact reports with no private inputs. Public GSM8K questions remain under their source license. This bench adds no CI, service, schedule, or deployment.
+
+## Explicit projection-edit primitive
+
+`surgery.py` is an experimental editing tool, not a successful edit recipe. It requires the pinned `gguf` library from the engine source and NumPy. A spec records a hypothesis and an `edits` array containing `tensor`, `direction` (a local `.npy` vector), and `strength` in [0,1]. It supports only distinct shared-expert down-projection tensors with F32/F16/Q4_0/Q8_0 storage. Directions must come from a documented development-only observation; weight statistics alone do not establish a behavioral cause.
+
+```sh
+/absolute/task-venv/bin/python tools/weight-space/surgery.py \
+  --source /absolute/original.gguf --source-sha256 VERIFIED_SHA256 \
+  --spec /absolute/explicit-edit.json --output /absolute/new-candidate.gguf
+/absolute/task-venv/bin/python tools/weight-space/test_surgery.py
+```
+
+The operation is `W_new = W - strength * d * (d^T W)`, with a unit direction `d` in the residual output dimension. The tool clones or exclusively copies the original, preserves quantized layouts, re-encodes only declared tensors, and verifies the original checksum and every byte outside declared tensor ranges. Its journal records actual quantized deltas and before/after checksums. Test strength zero as a quantization sham before attributing any effect to an edit; match random-direction controls by their observed delta norm. Tests use tiny artificial GGUFs and prove mechanics, not model improvement. No target-model weight edit has been qualified yet.
