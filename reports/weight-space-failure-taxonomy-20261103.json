@@ -56,6 +56,13 @@
       "case_id": "00ca5df429d4dd9925aa",
       "class": "candidate computed, detailed verification delayed final formatting",
       "evidence": "The body derives 250 and checks both sides of the original equality, but reaches cap before a FINAL line."
+    },
+    {
+      "model": "Clover",
+      "case_id": "010929c71f83399ac2f2",
+      "class": "intermediate arithmetic error with warranted rechecking",
+      "evidence": "The trace states 834/167=5 and R_166=1. Exact rational arithmetic instead gives R_166=834/835<1. Cap hit is not just formatting overhead.",
+      "oracle": "Python fractions.Fraction; exact symbolic rational comparison, no language-model judge."
     }
   ],
   "decisions": [
@@ -63,7 +70,8 @@
     "Do not label an output-cap hit a reasoning loop from cap or repeated n-gram rate alone.",
     "Test prompt-only concise output as a control before attributing gains to edited weights.",
     "The Qwen rechecking-direction hypothesis is exploratory; do not transfer its direction to Clover.",
-    "Check untouched validation and general regressions if a development edit gains, since suppressing valid uncertainty or casework can be harmful."
+    "Check untouched validation and general regressions if a development edit gains, since suppressing valid uncertainty or casework can be harmful.",
+    "Preserve warranted rechecking: the observed wrong intermediate quotient is a regression sentinel for any brevity-oriented edit."
   ],
   "limitations": [
     "Selected examples, not exhaustive failure classification or measured loop prevalence.",
