@@ -1,0 +1,69 @@
+{
+  "issue": "JUN-799",
+  "date": "2026-11-03",
+  "status": "development smoke only; no weight edit or improvement claim",
+  "model": "Diffuspace/Clover-35B-A3B-Preview-GGUF",
+  "revision": "32e22a02b885e173177b7ce7661ad13448b4f89e",
+  "artifact": "Clover-35B-A3B-Preview-Q4_0.gguf",
+  "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+  "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+  "hardware": "Apple M1 Max, 32 GiB unified memory",
+  "mode": "AR causal, greedy, thinking off, CPU MoE plus Metal for other tensors",
+  "max_output_tokens": 512,
+  "benchmark": "GSM8K train pinned mini-dev first 4; selected before scores",
+  "data_sha256": "49e9bbd78dd79660b8152fa321576624de415398dd50019fd4c322d89d911a41",
+  "bench_source_commit": "8231f64",
+  "bench_sha256": "cc53cdc5bbf6fc53bb78ae198ffd5136d210ff86604fd2029125eaa61e397521",
+  "launcher_sha256": "2c4d3cbfd4066bd89b9cf1e2b569cad7342b057fa609052b596644c7497b864b",
+  "summary": {
+    "n": 4,
+    "correct": 4,
+    "accuracy": 1.0,
+    "wall_seconds": 228.57292724912986,
+    "generated_tokens": 708,
+    "seconds_per_correct": 57.143231812282465,
+    "tokens_per_correct": 177.0,
+    "limit_hits": 0,
+    "no_final_answer": 0
+  },
+  "cases": [
+    {
+      "id": "00011069db164cff296a",
+      "correct": true,
+      "wall_seconds": 106.90059500001371,
+      "repeated_fourgram_fraction": 0.08
+    },
+    {
+      "id": "000ecce14264e8b4ef50",
+      "correct": true,
+      "wall_seconds": 59.21506404108368,
+      "repeated_fourgram_fraction": 0.0
+    },
+    {
+      "id": "00277a25ec5fc136b81b",
+      "correct": true,
+      "wall_seconds": 40.754636500030756,
+      "repeated_fourgram_fraction": 0.13636363636363635
+    },
+    {
+      "id": "002c706edc1e06cd87a6",
+      "correct": true,
+      "wall_seconds": 21.702631708001718,
+      "repeated_fourgram_fraction": 0.0
+    }
+  ],
+  "engine_process_status": "completed",
+  "limitations": [
+    "n=4; not a population accuracy estimate",
+    "no candidate weight edits evaluated",
+    "BF16, diffusion/self-speculative, held-out and regression evaluations incomplete",
+    "CPU/Metal timing includes cold-start effects within requests; no performance comparison yet"
+  ],
+  "remaining": [
+    "Qwen baseline",
+    "faster matched backend condition",
+    "MATH hard dev baseline",
+    "observed-failure-directed edits and controls",
+    "frozen held-out evaluation"
+  ]
+}

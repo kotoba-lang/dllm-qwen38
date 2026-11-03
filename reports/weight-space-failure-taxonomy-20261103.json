@@ -1,0 +1,81 @@
+{
+  "issue": "JUN-799",
+  "date": "2026-11-03",
+  "status": "exploratory manual failure diagnosis; reference scores unchanged",
+  "qwen_gsm_results_sha256": "4cea2524bf0bbcdf07352f1d88a7e22ab072f4507fd1ef0ed2dece2e1a0fb13a",
+  "clover_math_evidence": {
+    "prefix_rows": 19,
+    "prefix_sha256": "83a70c8a6b967df94e439e51e17f9aa1bd5cca0ccb2832da65e6056d88c9fa58",
+    "note": "Only this completed prefix was inspected; the full baseline was still running."
+  },
+  "examples": [
+    {
+      "model": "Qwen",
+      "case_id": "002c706edc1e06cd87a6",
+      "class": "reference-consistent candidate computed, then ambiguous wording reconsidered until cap",
+      "evidence": "The body computes 25, then repeatedly weighs multiplicative interpretations; no FINAL line."
+    },
+    {
+      "model": "Qwen",
+      "case_id": "0058a02125f666a9ced2",
+      "class": "reference-consistent candidate computed, then interpretation verification until cap",
+      "evidence": "The body computes 90, then reopens whether discarded donations count in the stated total."
+    },
+    {
+      "model": "Qwen",
+      "case_id": "007238e71f6e66175820",
+      "class": "reference-consistent candidate computed, then ambiguous wording reconsidered until cap",
+      "evidence": "The body computes 30 and then rechecks the band multiplier interpretation."
+    },
+    {
+      "model": "Qwen",
+      "case_id": "003cbd7949bf26948b45",
+      "class": "semantic reference disagreement",
+      "evidence": "Multiplicative versus additive interpretation of comparison wording yields 40 versus reference 48; arithmetic within the chosen interpretation is consistent."
+    },
+    {
+      "model": "Qwen",
+      "case_id": "00a8b65a3e385ea27fb8",
+      "class": "semantic reference disagreement",
+      "evidence": "Lump-sum versus per-day payment interpretation yields -90 versus reference 160; not a demonstrated arithmetic error."
+    },
+    {
+      "model": "Clover",
+      "case_id": "00a3ea9b94091f90df12",
+      "class": "cap during unfinished legitimate casework",
+      "evidence": "Algebraic factorization leads to two cases; output ends at the beginning of the second case. No repeated-text loop is established."
+    },
+    {
+      "model": "Clover",
+      "case_id": "00b723d88936ed7b33ff",
+      "class": "cap during unfinished legitimate casework",
+      "evidence": "The solution enumerates exponent-zero, base-one, and base-minus-one cases; output ends while checking the last case."
+    },
+    {
+      "model": "Clover",
+      "case_id": "00ca5df429d4dd9925aa",
+      "class": "candidate computed, detailed verification delayed final formatting",
+      "evidence": "The body derives 250 and checks both sides of the original equality, but reaches cap before a FINAL line."
+    },
+    {
+      "model": "Clover",
+      "case_id": "010929c71f83399ac2f2",
+      "class": "intermediate arithmetic error with warranted rechecking",
+      "evidence": "The trace states 834/167=5 and R_166=1. Exact rational arithmetic instead gives R_166=834/835<1. Cap hit is not just formatting overhead.",
+      "oracle": "Python fractions.Fraction; exact symbolic rational comparison, no language-model judge."
+    }
+  ],
+  "decisions": [
+    "Keep exact-reference scores and all original cases; do not post-hoc regrade ambiguous questions.",
+    "Do not label an output-cap hit a reasoning loop from cap or repeated n-gram rate alone.",
+    "Test prompt-only concise output as a control before attributing gains to edited weights.",
+    "The Qwen rechecking-direction hypothesis is exploratory; do not transfer its direction to Clover.",
+    "Check untouched validation and general regressions if a development edit gains, since suppressing valid uncertainty or casework can be harmful.",
+    "Preserve warranted rechecking: the observed wrong intermediate quotient is a regression sentinel for any brevity-oriented edit."
+  ],
+  "limitations": [
+    "Selected examples, not exhaustive failure classification or measured loop prevalence.",
+    "Finite-cap observations do not establish infinite looping or a causal neural direction.",
+    "The residual edit and controls were still waiting for the baseline GPU job to finish."
+  ]
+}
