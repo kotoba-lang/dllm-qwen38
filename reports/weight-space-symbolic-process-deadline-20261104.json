@@ -1,0 +1,31 @@
+{
+  "issue": "JUN-799",
+  "date": "2026-11-04",
+  "scope": "Synthetic symbolic scorer subprocess deadline; no inference, datasets, final outputs or regrading.",
+  "parent_prototype_report": "weight-space-symbolic-grader-prototype-20261104.json",
+  "profile": "boxed-math-verify-0.9.0-round12-v1",
+  "policy": {
+    "default_timeout_seconds": 20,
+    "maximum_timeout_seconds": 60,
+    "timeout_result": "correct=null, status=grader_unavailable, reason=process_timeout",
+    "child_cleanup": "kill then communicate/reap before returning",
+    "limitations": "OS process creation and cleanup overhead precludes a real-time scheduling guarantee; this is not a security sandbox."
+  },
+  "checks": {
+    "unittest_methods": 3,
+    "results": "passed",
+    "coverage": [
+      "Real child imports pinned math libraries and accepts synthetic fraction equivalence.",
+      "Tiny declared deadline terminates child and returns unavailable, never an incorrect score.",
+      "Empty reference and nonfinite/out-of-range deadlines reject before child launch."
+    ]
+  },
+  "files": {
+    "symbolic_process.py": "71a685b4727061981db70120131aacfaaae5d49906692d46362a64f958a10fe4",
+    "test_symbolic_process.py": "545ab785e8a3a6f7755718754d0f35b8cd54d9d2c4c0ce1d025c4ef5d9f93a73"
+  },
+  "remaining": [
+    "Formal MATH scorer compatibility and target symbolic evaluation remain unqualified.",
+    "Existing numeric benchmark and frozen worker files remain unchanged."
+  ]
+}
