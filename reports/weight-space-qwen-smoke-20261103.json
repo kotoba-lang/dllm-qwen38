@@ -1,0 +1,62 @@
+{
+  "issue": "JUN-799",
+  "date": "2026-11-03",
+  "status": "development smoke only; no weight edit",
+  "model": "ggml-org/Qwen3.6-35B-A3B-GGUF",
+  "revision": "7878dc9a905c7c9379e5e8d6a1aa9affdd6839c5",
+  "artifact": "Qwen3.6-35B-A3B-Q4_K_M.gguf",
+  "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+  "backend_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b",
+  "bench_source_commit": "7a14cb7",
+  "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9",
+  "hardware": "Apple M1 Max, 32 GiB unified memory",
+  "mode": "AR, greedy, thinking off, Metal all layers",
+  "max_output_tokens": 512,
+  "benchmark": "GSM8K train mini-dev first 4, chosen before scores",
+  "data_sha256": "49e9bbd78dd79660b8152fa321576624de415398dd50019fd4c322d89d911a41",
+  "summary": {
+    "n": 4,
+    "correct": 3,
+    "accuracy": 0.75,
+    "wall_seconds": 31.094563458347693,
+    "generated_tokens": 1256,
+    "seconds_per_correct": 10.364854486115897,
+    "tokens_per_correct": 418.6666666666667,
+    "limit_hits": 1,
+    "no_final_answer": 1
+  },
+  "cases": [
+    {
+      "id": "00011069db164cff296a",
+      "correct": true,
+      "wall_seconds": 7.9202760411426425,
+      "repeated_fourgram_fraction": 0.06875
+    },
+    {
+      "id": "000ecce14264e8b4ef50",
+      "correct": true,
+      "wall_seconds": 6.726319417124614,
+      "repeated_fourgram_fraction": 0.0
+    },
+    {
+      "id": "00277a25ec5fc136b81b",
+      "correct": true,
+      "wall_seconds": 4.196494875010103,
+      "repeated_fourgram_fraction": 0.011627906976744186
+    },
+    {
+      "id": "002c706edc1e06cd87a6",
+      "correct": false,
+      "wall_seconds": 12.251473125070333,
+      "repeated_fourgram_fraction": 0.06020066889632107
+    }
+  ],
+  "failure_diagnosis": "Fourth response reached cap while reconsidering an ambiguous productivity phrase. It had already computed the reference numeric answer in reasoning, but never supplied a final line. Low repeated-fourgram fraction; not classified as a literal loop.",
+  "engine_process_status": "completed",
+  "limitations": [
+    "n=4; not a population accuracy estimate",
+    "512-token non-thinking diagnostic, not official benchmark settings",
+    "timing differs from Clover CPU-MoE smoke and cannot compare model efficiency",
+    "no weight edit, held-out test or regression results yet"
+  ]
+}
