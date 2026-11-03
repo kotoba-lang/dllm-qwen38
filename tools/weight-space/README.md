@@ -88,3 +88,14 @@ For a source directory `ENGINE_SOURCE` and its matching build directory `ENGINE_
 Use `capture_data.load_vectors()` to read the last nonempty residual for each prompt/layer. Early microbatches can legitimately have zero selected output rows; their empty tensors are counted rather than indexed as final vectors. Missing nonempty finals, inconsistent byte counts, unsupported layouts, nonfinite values, or API/graph accounting mismatches fail closed. The first real Qwen observation collected eight prefill API calls, 50 first-layer graph visits, 6139 input tokens, and 24 final vectors; the identical-prefix reset controls matched exactly. This qualifies that observation path only, not a causal edit or performance gain.
 
 The first Qwen selected-development screen used eight GSM8K cases, including the three direction-source cap hits. Original, zero-strength sham, layer39 strength0.25 projection and norm-matched random direction all scored 3/8 with 4383 generated tokens and three cap hits. The sham response text matched the original exactly. A separate concise-prompt control scored 7/8 with 668 tokens and no cap hits. This does not support promoting that weight candidate; the prompt result is exploratory and is not a weight-space gain. Full identities, paired results and integrity journals are in [the Qwen pilot report](../../reports/weight-space-qwen-pilot-20261103.json). Validation and final tests were not used.
+
+To reproduce a previously declared direction from saved captures, use `derive_direction.py`. Select the layer, pair indexes and consistency gate before looking at candidate scores. The command performs no inference, refuses a changed reset control, records every capture-file checksum, and writes no direction when the gate fails. Use a fresh output directory:
+
+```sh
+/absolute/task-venv/bin/python tools/weight-space/derive_direction.py \
+  --capture /absolute/evidence/observation/capture \
+  --output /absolute/evidence/rederived-direction \
+  --layer 39 --pairs 0:1 2:3 4:5 --reset 6:7 --min-mean-cosine 0.05
+```
+
+This command reproduces both saved target-pilot `.npy` direction hashes exactly; it does not add observations or demonstrate improvement.
