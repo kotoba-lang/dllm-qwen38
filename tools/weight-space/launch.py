@@ -22,6 +22,7 @@ def main():
         raise ValueError("checkpoint checksum mismatch")
     port = int(config.get("port", 17977))
     with socket.socket() as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(("127.0.0.1", port))
     output = pathlib.Path(config["output"])
     output.mkdir(parents=True, exist_ok=True)

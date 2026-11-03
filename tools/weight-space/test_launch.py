@@ -24,6 +24,7 @@ class Handler(BaseHTTPRequestHandler):
   self.send_response(200);self.end_headers()
   self.wfile.write(json.dumps({{"content":"FINAL: 2","tokens_predicted":5,"stop_type":"eos"}}).encode())
 signal.signal(signal.SIGTERM,lambda *args:sys.exit(0))
+HTTPServer.allow_reuse_address=True
 HTTPServer(('127.0.0.1',port),Handler).serve_forever()
 '''
 
@@ -54,6 +55,8 @@ class LaunchTest(unittest.TestCase):
             self.assertEqual(status["state"], "completed")
             self.assertTrue(status["engine_stopped"])
             self.assertEqual(json.loads((root / "run/summary.json").read_text())["correct"], 1)
+            result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
             with socket.socket() as sock:
                 self.assertNotEqual(sock.connect_ex(("127.0.0.1", port)), 0)
             config.update(engine_sha256="0" * 64, output=str(root / "bad"))
