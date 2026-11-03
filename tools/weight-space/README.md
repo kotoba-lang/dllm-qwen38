@@ -122,3 +122,14 @@ python3 tools/weight-space/test_collect.py
 ```
 
 The collector adds scorer-revision and launch-profile checks beyond the current two-run `compare` command. Keep the recorded datasets and launch files available. Whole checkpoint files are not rehashed at collection time; their verified launch identities and artifact checksums are retained. A no-op entry records whether checkpoint hashes and response text agree, without counting a repeated answer as a new independent problem.
+
+`meter.cpp` is a separate bounded causal-generation observer. Build it against the same pinned headers/libraries as `capture.cpp`. It forces a fresh greedy sampler (temperature0, top-k1, seed42, neutral penalties), ignores sampler CLI overrides, disables warmup, clears memory for each input, rejects adapters/speculative/embedding modes, and requires an explicit output cap1..1024. `WSP_METER_LIST` optionally names up to eight local prompt files (each at most64KiB/4096 tokens); otherwise the raw CLI prompt is used. `WSP_METER_DIR` must be an existing empty directory. Verify checkpoint and binary/library checksums before invocation.
+
+```sh
+WSP_METER_DIR=/absolute/evidence/meter-output \
+WSP_METER_LIST=/absolute/evidence/prompt-files.txt \
+  /absolute/meter-binary -m /absolute/verified-model.gguf \
+  -c4096 -b512 -ub256 -ngl99 -t6 -tb6 --flash-attn on --fit off -n16
+```
+
+The helper saves raw content bytes, sampled token IDs (including EOG), per-call trace and per-input/overall counts. Prefill API calls, single-token decode API calls, sampled/emitted tokens and observed `attn_norm-0` graph visits are distinct fields. Each call is synchronized and times host wall duration; this is not GPU-seconds. Any call without the expected graph marker or graph outside a declared call invalidates completion. Its artificial CPU fixture checks with both pinned SDKs used13 prefill calls/23 graphs plus9 decode calls/9 graphs, while emitting12 tokens across three inputs; identical-input replay matched. Caps outside1..1024, speculative mode and nonempty output were rejected. These checks do not qualify target MoE/GDN generation or equivalence to the HTTP server. The callback/synchronization also changes the timing profile. See [the meter fixture report](../../reports/weight-space-native-meter-fixture-20261104.json).
