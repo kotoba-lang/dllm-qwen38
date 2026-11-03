@@ -25,7 +25,7 @@ The source is `EleutherAI/hendrycks_math` at revision `21a5633873b6a120296cce3e2
 
 ## Start the pinned engine
 
-Build a llama.cpp revision that contains Clover support (PR 31306). The initial source revision inspected was `749db7f034d43d6de01a01f6d8c872d02afa6c7b`. Record the build options, version, launch command, and logs in the evidence directory. Use only the selected checkpoint; do not run multiple large checkpoints concurrently on a memory-constrained host.
+Build a llama.cpp revision compatible with the exact artifact. For the official Clover GGUF at revision `32e22a02b885e173177b7ce7661ad13448b4f89e`, this experiment uses the earlier full PR implementation `cb09d4355d8bf968bb907c5de03cf42d8aa073ce`. Main `749db7f034d43d6de01a01f6d8c872d02afa6c7b` has AR-only support and rejects that GGUF: its metadata lacks `expert_shared_count`, and it has 120 diffusion tensors that this loader does not consume. An override for the missing count alone did not repair the tensor-count mismatch. Preserve those failures separately from inference scores. Record build options, version, launch command, and logs. Use only the selected checkpoint; do not run multiple large checkpoints concurrently on a memory-constrained host.
 
 ```sh
 /absolute/llama-server -m /absolute/model.gguf --host 127.0.0.1 --port 17977 \
@@ -43,7 +43,7 @@ Verify the download against the distributor's SHA256 first. Pass that same hash 
 python3 tools/weight-space/bench.py run \
   --data /absolute/evidence/data/dev.json \
   --model /absolute/model.gguf --model-sha256 DISTRIBUTOR_SHA256 \
-  --backend-commit 749db7f034d43d6de01a01f6d8c872d02afa6c7b \
+  --backend-commit cb09d4355d8bf968bb907c5de03cf42d8aa073ce \
   --condition baseline-causal-q4 --thinking off --max-tokens 1024 \
   --output /absolute/evidence/runs/baseline
 ```
@@ -51,6 +51,8 @@ python3 tools/weight-space/bench.py run \
 Use `--limit 4` and a separate output directory for an initial smoke test. Omit it for the fixed 32-problem lane. Repeating the exact command resumes completed rows. Checkpoint, dataset, settings, script, and case-list changes require a new output directory. No request goes to a remote inference service; only explicit loopback HTTP endpoints are accepted.
 
 The scorer requires exactly one `FINAL: <number>` line outside thinking. An unfinished thinking trace or ambiguous answers fail extraction. This strict formatting is part of the diagnostic, so report extraction failures separately from wrong numeric answers. Repeated four-gram fraction and output-limit hits are separate fields; neither is called a reasoning loop automatically.
+
+For repeated experiments, `python3 tools/weight-space/launch.py /absolute/experiment.json` manages the local engine lifetime, waits for health, runs/resumes the bench, and stops only its own child process. The JSON contains the `engine`, `engine_sha256`, `backend_commit`, `model`, `model_sha256`, `engine_args` array, `data`, `output`, `condition`, and optional `limit`, `thinking`, `max_tokens`, `request_timeout`, and `port` fields. It records launch identity, engine logs, and completion/failure status in the output directory. A checksum mismatch, occupied port, or changed launch config fails before inference. Use a new output directory for a new condition.
 
 ## Compare an edit
 

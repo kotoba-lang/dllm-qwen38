@@ -112,8 +112,8 @@ def run(args):
     if loaded is None or pathlib.Path(loaded).resolve() != pathlib.Path(args.model).resolve():
         raise ValueError(f"server model_path does not match requested checkpoint: {loaded}")
     settings = {"n_predict": args.max_tokens, "temperature": 0.0, "top_k": 1,
-                "top_p": 1.0, "min_p": 0.0, "repeat_penalty": 1.0,
-                "presence_penalty": 0.0, "frequency_penalty": 0.0,
+                "top_p": 1.0, "min_p": 0.0, "repeat_penalty": getattr(args, "repeat_penalty", 1.0),
+                "presence_penalty": getattr(args, "presence_penalty", 0.0), "frequency_penalty": 0.0,
                 "seed": args.seed, "cache_prompt": False, "stream": False}
     identity = {"schema": "wsp.local-run/v1", "data_sha256": digest(args.data),
                 "case_ids": [c["id"] for c in cases], "split": data["split"],
@@ -200,6 +200,8 @@ def main():
     p.add_argument("--max-tokens", type=int, default=1024)
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--presence-penalty", type=float, default=0.0)
+    p.add_argument("--repeat-penalty", type=float, default=1.0)
     p.add_argument("--timeout", type=float, default=600)
     p.set_defaults(func=run)
     p = sub.add_parser("compare")
