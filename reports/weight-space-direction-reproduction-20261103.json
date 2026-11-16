@@ -1,0 +1,116 @@
+{
+  "issue": "JUN-799",
+  "status": "saved observations reproduce target directions without new inference",
+  "source_sha256": "646b8493a9157d3c5f69c6b169c47b765e78b1538c222acf0c3052913a04e19d",
+  "models": {
+    "qwen": {
+      "layer": 39,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "reset_pair": [
+        6,
+        7
+      ],
+      "minimum_mean_pair_cosine": 0.05,
+      "pair_delta_norms": [
+        18.57619285583496,
+        17.78513526916504,
+        13.204200744628906
+      ],
+      "pair_cosines": [
+        0.0661802738904953,
+        0.062208086252212524,
+        0.2831091284751892
+      ],
+      "mean_pair_cosine": 0.137165829539299,
+      "reset_control_max_abs": 0.0,
+      "accounting": {
+        "capture_status": {
+          "prefill_api_calls": 8,
+          "prompt_tokens": 6139,
+          "first_layer_graph_visits": 50,
+          "generated_tokens": 0,
+          "captured_tensors": 150,
+          "process_exit": 0,
+          "capture_failed": false
+        },
+        "empty_microbatch_outputs": 42,
+        "nonempty_final_vectors": 24
+      },
+      "source_sha256": "646b8493a9157d3c5f69c6b169c47b765e78b1538c222acf0c3052913a04e19d",
+      "gate_passed": true,
+      "qualification": "Saved development-prefix association only; not proof of causal obstruction or performance gain",
+      "direction_sha256": "e5629f4f3d226e4b630e5827c3fb4a9974f2dbfc617e9ce1ebf6f26fc4d55294"
+    },
+    "clover": {
+      "layer": 39,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "reset_pair": [
+        6,
+        7
+      ],
+      "minimum_mean_pair_cosine": 0.05,
+      "pair_delta_norms": [
+        14.736563682556152,
+        18.397377014160156,
+        14.214801788330078
+      ],
+      "pair_cosines": [
+        0.48046791553497314,
+        0.03312462940812111,
+        0.015891756862401962
+      ],
+      "mean_pair_cosine": 0.17649476726849875,
+      "reset_control_max_abs": 0.0,
+      "accounting": {
+        "capture_status": {
+          "prefill_api_calls": 8,
+          "prompt_tokens": 7734,
+          "first_layer_graph_visits": 64,
+          "generated_tokens": 0,
+          "captured_tensors": 192,
+          "process_exit": 0,
+          "capture_failed": false
+        },
+        "empty_microbatch_outputs": 56,
+        "nonempty_final_vectors": 24
+      },
+      "source_sha256": "646b8493a9157d3c5f69c6b169c47b765e78b1538c222acf0c3052913a04e19d",
+      "gate_passed": true,
+      "qualification": "Saved development-prefix association only; not proof of causal obstruction or performance gain",
+      "direction_sha256": "ac9e543e2d4aea153e960b42394786fb8ca728e1ae520dfa3772ec6ae8e67eb0"
+    }
+  },
+  "checks": [
+    "Qwen exact original direction NPY SHA",
+    "Clover exact original direction NPY SHA",
+    "minimum mean cosine0.99 fails and emits no NPY",
+    "nonidentical reset pair rejects before output creation"
+  ],
+  "limitations": "Reproducing the arithmetic and artifact is not evidence for a causal failure direction or model gain."
+}

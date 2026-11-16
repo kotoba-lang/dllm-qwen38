@@ -1,0 +1,687 @@
+{
+  "issue": "JUN-801",
+  "date": "2026-11-04",
+  "status": "completed Clover frozen-candidate GSM8K train-derived validation32",
+  "scope": "Fixed original/projection/encoding-only/prompt controls; exact question/ID disjoint from development; no final test access, further editing or validation-answer inspection.",
+  "protocol_sha256": "e1f6a1dc8613aec7cac53863d68bfdcf9c2dddfed55d3410bb588a31a20a0377",
+  "bundle_sha256": "29ccc5e1de310d890b89d2db882ac61933a3d6e0c7d6cc164db3482d5f19804e",
+  "independent_recollection_matches": true,
+  "bundle": {
+    "schema": "wsp.completed-run-bundle/v1",
+    "plan_sha256": "adf3273cc8fde1cae3eab365642a27dbb80f25775d41b98c5fc63c494dcd28da",
+    "collector_sha256": "34c7d3ca06fe63ce24f6c95e036e9a271bb8443b3e85e3186d74cb129d63a277",
+    "comparison_code_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9",
+    "qualification": "frozen-candidate independent train-derived validation; not final test or full regression qualification",
+    "runs": {
+      "original": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+          "case_ids": [
+            "00e6b47c6ef4c39dcfa6",
+            "0102942aa2c2d24db48a",
+            "0106aacdd8f409e9c10b",
+            "010cf4c745ed239948e5",
+            "0114addb0241fef1d1d7",
+            "0116684a1e24d6c51036",
+            "012b65611e0fb2373442",
+            "01318ef8ec9cde0e2a0d",
+            "0132397cfe9397b25f1f",
+            "01350fedca9fa36e6c09",
+            "0141f83a178778c7b5af",
+            "01459471adadbffd7f9e",
+            "0147a033a5c585cc35dd",
+            "014b2cdf86492535a33e",
+            "01509c47dcfa20cd57c6",
+            "01517d5e3f52ae5ae7ef",
+            "0158cd7a1ed7fb18e345",
+            "01650c8ea737a94f69bd",
+            "0167b4b3b7466651bd75",
+            "017318f68235c0ad0e4c",
+            "01865dd51a7aafe13b19",
+            "018c6e6139cc708fef69",
+            "018f9e73548b1df1b1df",
+            "0198aefd1cbec2edad4d",
+            "01a3cfc05a35e5b07624",
+            "01a67812528afc721991",
+            "01b8a58f39cca3c27c33",
+            "01cc628f318aba26dea3",
+            "01cd2030348881f47b40",
+            "01cf77fbe180ccf027ac",
+            "01d5112f2897b96f4706",
+            "01dd42563bfe6adc6b7b"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+          "condition": "independent-validation-clover-gsm8k-original",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 30,
+          "accuracy": 0.9375,
+          "wall_seconds": 490.57610354060307,
+          "generated_tokens": 5944,
+          "seconds_per_correct": 16.35253678468677,
+          "tokens_per_correct": 198.13333333333333,
+          "limit_hits": 0,
+          "no_final_answer": 1
+        },
+        "artifact_sha256": {
+          "manifest.json": "9991b40b9564e32a223044a40bd55e1366a49cb0ef66b45a2502bde0fa91b295",
+          "launch.json": "d40bc2e938a1a52514a0433fc4f93c186c43bb621a7a55c4d6fc401e0f4c8f41",
+          "process-status.json": "f65ee10383b3eb5be879c40fafb5d7b50e4585f07138034cbd3e37ce1dd527d4",
+          "results.jsonl": "6070014f1cc7e08b8e26a6d9e5904b5e7c45c4cebd798db55014751605843320",
+          "summary.json": "7d655c469738a0865e6af674bff94a13cd23addee5fbc8e105c649c5b30f6b6c"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "requantize-only": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+          "case_ids": [
+            "00e6b47c6ef4c39dcfa6",
+            "0102942aa2c2d24db48a",
+            "0106aacdd8f409e9c10b",
+            "010cf4c745ed239948e5",
+            "0114addb0241fef1d1d7",
+            "0116684a1e24d6c51036",
+            "012b65611e0fb2373442",
+            "01318ef8ec9cde0e2a0d",
+            "0132397cfe9397b25f1f",
+            "01350fedca9fa36e6c09",
+            "0141f83a178778c7b5af",
+            "01459471adadbffd7f9e",
+            "0147a033a5c585cc35dd",
+            "014b2cdf86492535a33e",
+            "01509c47dcfa20cd57c6",
+            "01517d5e3f52ae5ae7ef",
+            "0158cd7a1ed7fb18e345",
+            "01650c8ea737a94f69bd",
+            "0167b4b3b7466651bd75",
+            "017318f68235c0ad0e4c",
+            "01865dd51a7aafe13b19",
+            "018c6e6139cc708fef69",
+            "018f9e73548b1df1b1df",
+            "0198aefd1cbec2edad4d",
+            "01a3cfc05a35e5b07624",
+            "01a67812528afc721991",
+            "01b8a58f39cca3c27c33",
+            "01cc628f318aba26dea3",
+            "01cd2030348881f47b40",
+            "01cf77fbe180ccf027ac",
+            "01d5112f2897b96f4706",
+            "01dd42563bfe6adc6b7b"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "4b574153f571cf7305cbe1feafcc9c13c9fd8c5dd4dd6f44c1d797aa6048b99b",
+          "condition": "independent-validation-clover-gsm8k-requantize-only",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 30,
+          "accuracy": 0.9375,
+          "wall_seconds": 698.452782668639,
+          "generated_tokens": 5693,
+          "seconds_per_correct": 23.281759422287966,
+          "tokens_per_correct": 189.76666666666668,
+          "limit_hits": 0,
+          "no_final_answer": 1
+        },
+        "artifact_sha256": {
+          "manifest.json": "1a0f97946a2fef291b698bbf9c9411f00f9aa6042fa9ddf720018de2dfcd6ffa",
+          "launch.json": "30462b9990abf6ef372b3c03c2635a74ca801512e54ac7d66cb3f0b9bd4a9b3b",
+          "process-status.json": "1f0fb16d699ee71bf9761b8ec8fa4da7f1f898fa6625feb2d1044137fe34f543",
+          "results.jsonl": "b711c9d9450032acb0f2d9ec2fddc8c664d6fbca95fd777af0426b3eae7c796a",
+          "summary.json": "69395d38e6bc3901acddab505b9eea52cbdb9f22c8a3dc8421a7dec022f0763b"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "projection025": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "897aef8698a3560e06881b1ccac58fa2ffd3b414e06b873e4e10a709fd0070a2",
+          "case_ids": [
+            "00e6b47c6ef4c39dcfa6",
+            "0102942aa2c2d24db48a",
+            "0106aacdd8f409e9c10b",
+            "010cf4c745ed239948e5",
+            "0114addb0241fef1d1d7",
+            "0116684a1e24d6c51036",
+            "012b65611e0fb2373442",
+            "01318ef8ec9cde0e2a0d",
+            "0132397cfe9397b25f1f",
+            "01350fedca9fa36e6c09",
+            "0141f83a178778c7b5af",
+            "01459471adadbffd7f9e",
+            "0147a033a5c585cc35dd",
+            "014b2cdf86492535a33e",
+            "01509c47dcfa20cd57c6",
+            "01517d5e3f52ae5ae7ef",
+            "0158cd7a1ed7fb18e345",
+            "01650c8ea737a94f69bd",
+            "0167b4b3b7466651bd75",
+            "017318f68235c0ad0e4c",
+            "01865dd51a7aafe13b19",
+            "018c6e6139cc708fef69",
+            "018f9e73548b1df1b1df",
+            "0198aefd1cbec2edad4d",
+            "01a3cfc05a35e5b07624",
+            "01a67812528afc721991",
+            "01b8a58f39cca3c27c33",
+            "01cc628f318aba26dea3",
+            "01cd2030348881f47b40",
+            "01cf77fbe180ccf027ac",
+            "01d5112f2897b96f4706",
+            "01dd42563bfe6adc6b7b"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "87ed108a00aaea988e0b063af305d9c06df4ec90198ccf735781d8a8a055669d",
+          "condition": "independent-validation-clover-gsm8k-projection025",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 30,
+          "accuracy": 0.9375,
+          "wall_seconds": 800.5760329589248,
+          "generated_tokens": 5721,
+          "seconds_per_correct": 26.68586776529749,
+          "tokens_per_correct": 190.7,
+          "limit_hits": 0,
+          "no_final_answer": 1
+        },
+        "artifact_sha256": {
+          "manifest.json": "7c57b00dbc07a866f1b89e32f51ceca5913217f02ac3ba27bfcce030bfbbbb7f",
+          "launch.json": "194bb324a6605fac51ff0bff411364c5b346a298e90733f35ab27685e7a12394",
+          "process-status.json": "fe10b86da42895296ba80804ea5a96dfd1dde80920e2bb30585b484ec29fd302",
+          "results.jsonl": "4ea692637f09e49124d476c8f0bea05063cf2b7917d3c229c404747ec06d57c6",
+          "summary.json": "850a37525811ce53f10edcd4cc921647f2e7ed4e586042bbdc46b3e8a4eae895"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "prompt-concise": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "6e19a1dab2aff4022b05bfe2b840ab5afd6c244c5e4473870249d7e3deddb2bd",
+          "case_ids": [
+            "00e6b47c6ef4c39dcfa6",
+            "0102942aa2c2d24db48a",
+            "0106aacdd8f409e9c10b",
+            "010cf4c745ed239948e5",
+            "0114addb0241fef1d1d7",
+            "0116684a1e24d6c51036",
+            "012b65611e0fb2373442",
+            "01318ef8ec9cde0e2a0d",
+            "0132397cfe9397b25f1f",
+            "01350fedca9fa36e6c09",
+            "0141f83a178778c7b5af",
+            "01459471adadbffd7f9e",
+            "0147a033a5c585cc35dd",
+            "014b2cdf86492535a33e",
+            "01509c47dcfa20cd57c6",
+            "01517d5e3f52ae5ae7ef",
+            "0158cd7a1ed7fb18e345",
+            "01650c8ea737a94f69bd",
+            "0167b4b3b7466651bd75",
+            "017318f68235c0ad0e4c",
+            "01865dd51a7aafe13b19",
+            "018c6e6139cc708fef69",
+            "018f9e73548b1df1b1df",
+            "0198aefd1cbec2edad4d",
+            "01a3cfc05a35e5b07624",
+            "01a67812528afc721991",
+            "01b8a58f39cca3c27c33",
+            "01cc628f318aba26dea3",
+            "01cd2030348881f47b40",
+            "01cf77fbe180ccf027ac",
+            "01d5112f2897b96f4706",
+            "01dd42563bfe6adc6b7b"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+          "condition": "independent-validation-clover-gsm8k-prompt-concise",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 31,
+          "accuracy": 0.96875,
+          "wall_seconds": 325.3147252087947,
+          "generated_tokens": 2094,
+          "seconds_per_correct": 10.494023393832087,
+          "tokens_per_correct": 67.54838709677419,
+          "limit_hits": 0,
+          "no_final_answer": 0
+        },
+        "artifact_sha256": {
+          "manifest.json": "a3c91e421d986121d95a8d3c6957f1dfe3040978794c176d7044a7fe2176bd7b",
+          "launch.json": "c7a384b59738dddee5a4a1d5739737a8feffe4692462e74a291775807d8d7149",
+          "process-status.json": "2f1c48d1dfd508a5f4d7d936bf42125b117463d8e403f06462d1faf203ed8ca8",
+          "results.jsonl": "e55aa07278b9061205230a9845e957a487835e9db23a98a56da9772e96493dd1",
+          "summary.json": "124d490183533793418d306b5988a35e6670ee0c7546cd8367966b5937214da2"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      }
+    },
+    "paired": [
+      {
+        "baseline": "original",
+        "candidate": "projection025",
+        "result": {
+          "baseline": {
+            "n": 32,
+            "correct": 30,
+            "accuracy": 0.9375,
+            "wall_seconds": 490.57610354060307,
+            "generated_tokens": 5944,
+            "seconds_per_correct": 16.35253678468677,
+            "tokens_per_correct": 198.13333333333333,
+            "limit_hits": 0,
+            "no_final_answer": 1
+          },
+          "candidate": {
+            "n": 32,
+            "correct": 30,
+            "accuracy": 0.9375,
+            "wall_seconds": 800.5760329589248,
+            "generated_tokens": 5721,
+            "seconds_per_correct": 26.68586776529749,
+            "tokens_per_correct": 190.7,
+            "limit_hits": 0,
+            "no_final_answer": 1
+          },
+          "paired_accuracy_delta": 0.0,
+          "bootstrap_95_interval": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "original",
+        "candidate": "requantize-only",
+        "result": {
+          "baseline": {
+            "n": 32,
+            "correct": 30,
+            "accuracy": 0.9375,
+            "wall_seconds": 490.57610354060307,
+            "generated_tokens": 5944,
+            "seconds_per_correct": 16.35253678468677,
+            "tokens_per_correct": 198.13333333333333,
+            "limit_hits": 0,
+            "no_final_answer": 1
+          },
+          "candidate": {
+            "n": 32,
+            "correct": 30,
+            "accuracy": 0.9375,
+            "wall_seconds": 698.452782668639,
+            "generated_tokens": 5693,
+            "seconds_per_correct": 23.281759422287966,
+            "tokens_per_correct": 189.76666666666668,
+            "limit_hits": 0,
+            "no_final_answer": 1
+          },
+          "paired_accuracy_delta": 0.0,
+          "bootstrap_95_interval": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "requantize-only",
+        "candidate": "projection025",
+        "result": {
+          "baseline": {
+            "n": 32,
+            "correct": 30,
+            "accuracy": 0.9375,
+            "wall_seconds": 698.452782668639,
+            "generated_tokens": 5693,
+            "seconds_per_correct": 23.281759422287966,
+            "tokens_per_correct": 189.76666666666668,
+            "limit_hits": 0,
+            "no_final_answer": 1
+          },
+          "candidate": {
+            "n": 32,
+            "correct": 30,
+            "accuracy": 0.9375,
+            "wall_seconds": 800.5760329589248,
+            "generated_tokens": 5721,
+            "seconds_per_correct": 26.68586776529749,
+            "tokens_per_correct": 190.7,
+            "limit_hits": 0,
+            "no_final_answer": 1
+          },
+          "paired_accuracy_delta": 0.0,
+          "bootstrap_95_interval": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      }
+    ],
+    "no_op": [],
+    "limitations": [
+      "Stored grades and measured timing are aggregated; no new inference or regrading.",
+      "Completion records and hashes are checked; model files are not rehashed by this read-only collector.",
+      "Small or selected development subsets do not establish held-out improvement."
+    ]
+  },
+  "supplementary_uncertainty": {
+    "schema": "wsp.supplementary-uncertainty/v1",
+    "source_bundle_sha256": "29ccc5e1de310d890b89d2db882ac61933a3d6e0c7d6cc164db3482d5f19804e",
+    "analysis_code_sha256": "9b7e7925f1c4769a44ee20b3c4d46b25d4c97917c234f116c82cce6bcfe5f94c",
+    "comparisons": [
+      {
+        "n": 32,
+        "wins": 0,
+        "losses": 0,
+        "observed_delta": 0.0,
+        "confidence": 0.95,
+        "interval": [
+          -0.1279759998407964,
+          0.1279759998407964
+        ],
+        "marginal_confidence": 0.975,
+        "win_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "loss_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "baseline": "original",
+        "candidate": "projection025",
+        "frozen_bootstrap_interval": [
+          0.0,
+          0.0
+        ],
+        "frozen_mcnemar_p": 1.0
+      },
+      {
+        "n": 32,
+        "wins": 0,
+        "losses": 0,
+        "observed_delta": 0.0,
+        "confidence": 0.95,
+        "interval": [
+          -0.1279759998407964,
+          0.1279759998407964
+        ],
+        "marginal_confidence": 0.975,
+        "win_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "loss_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "baseline": "original",
+        "candidate": "requantize-only",
+        "frozen_bootstrap_interval": [
+          0.0,
+          0.0
+        ],
+        "frozen_mcnemar_p": 1.0
+      },
+      {
+        "n": 32,
+        "wins": 0,
+        "losses": 0,
+        "observed_delta": 0.0,
+        "confidence": 0.95,
+        "interval": [
+          -0.1279759998407964,
+          0.1279759998407964
+        ],
+        "marginal_confidence": 0.975,
+        "win_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "loss_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "baseline": "requantize-only",
+        "candidate": "projection025",
+        "frozen_bootstrap_interval": [
+          0.0,
+          0.0
+        ],
+        "frozen_mcnemar_p": 1.0
+      }
+    ],
+    "method": "Binomial-tail inversion for win/loss marginals, each at1-alpha/2 confidence; subtract endpoints using Bonferroni joint coverage.",
+    "references": [
+      "https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm",
+      "https://www.itl.nist.gov/div898/handbook/prc/section4/prc473.htm"
+    ],
+    "qualifications": [
+      "Supplementary sensitivity analysis; frozen bootstrap and McNemar outputs are retained, not replaced.",
+      "Coverage requires independent identically distributed problem pairs. Failure-selected development screens do not justify population inference.",
+      "This conservative interval is not a tight exact paired-risk-difference interval.",
+      "Confidence is per comparison, not adjusted across model, trial or benchmark families.",
+      "No new inference or regrading."
+    ]
+  },
+  "decision": "No observed projection accuracy gain: original, encoding-only and projection each30/32, with zero paired correctness changes across all three weight comparisons. Projection tokens5721 are below original5944 but above encoding-only5693, so no projection-specific token benefit is established. One extraction failure persists and cap hits remain zero in all three. Separate prompt-only31/32 with2094 tokens is descriptive, not weight-edit improvement.",
+  "source_label_note": "The frozen comparator uses a generic development-diagnostic label; actual split=validation and the collection protocol identify this train-derived validation. Runtime scorer unchanged.",
+  "limitations": [
+    "One frozen candidate and one greedy closed-thinking quantized causal-AR profile, not BF16/official sampling or diffusion qualification.",
+    "Zero discordances on32 cases do not establish population equivalence or minus1/minus2pp noninferiority. The empirical bootstrap[0,0] is not such proof.",
+    "Supplementary conservative interval about[-12.80pp,+12.80pp] assumes iid problem pairs and is not adjusted across model/task families.",
+    "Fixed lexical split audit found no flags but semantic near-duplicate exclusion and pretraining-unseen status remain unqualified.",
+    "Single-run wall times are descriptive; no repeated timing, GPU-seconds or efficiency qualification.",
+    "Clover hard-integer MATH validation, target meter, isolated final and broader regressions remain incomplete."
+  ]
+}

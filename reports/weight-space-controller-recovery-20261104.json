@@ -1,0 +1,197 @@
+{
+  "issue": "JUN-799",
+  "date": "2026-11-04",
+  "incident": "Two meter controllers used the same mutable output/status location. Controller13924 completed native probes; duplicate14411 failed at exclusive outputs-directory creation before its model loop. Cap-v1 saw the failed shared status and stopped before inference.",
+  "original_evidence_preserved": true,
+  "meter_results": {
+    "qwen": {
+      "name": "qwen",
+      "status": {
+        "completed_prompts": 2,
+        "prompt_tokens_submitted": 151,
+        "attempted_prefill_input_tokens": 151,
+        "attempted_decode_input_tokens": 1364,
+        "token_cap": 1024,
+        "temperature": 0,
+        "top_k": 1,
+        "seed": 42,
+        "n_batch_effective": 512,
+        "n_ubatch_effective": 256,
+        "n_ctx_effective": 4096,
+        "sampled_including_eog": 1366,
+        "emitted_tokens": 1365,
+        "prefill_api_calls": 2,
+        "decode_api_calls": 1364,
+        "prefill_graph_visits": 2,
+        "decode_graph_visits": 1364,
+        "undeclared_graph_visits": 0,
+        "process_exit": 0
+      },
+      "comparisons": [
+        {
+          "case_id": "00011069db164cff296a",
+          "exact_server_content_sha_match": false,
+          "prompt_token_match": true,
+          "sampled_token_match": false,
+          "stop_kind_match": true,
+          "all_matches": false,
+          "observed": {
+            "prompt_index": 0,
+            "prompt_tokens": 68,
+            "sampled_including_eog": 342,
+            "emitted_tokens": 341,
+            "eog": true,
+            "prefill_api_calls": 1,
+            "decode_api_calls": 341,
+            "prefill_graph_visits": 1,
+            "decode_graph_visits": 341,
+            "api_exit": 0
+          }
+        },
+        {
+          "case_id": "002c706edc1e06cd87a6",
+          "exact_server_content_sha_match": false,
+          "prompt_token_match": true,
+          "sampled_token_match": true,
+          "stop_kind_match": true,
+          "all_matches": false,
+          "observed": {
+            "prompt_index": 1,
+            "prompt_tokens": 83,
+            "sampled_including_eog": 1024,
+            "emitted_tokens": 1024,
+            "eog": false,
+            "prefill_api_calls": 1,
+            "decode_api_calls": 1023,
+            "prefill_graph_visits": 1,
+            "decode_graph_visits": 1023,
+            "api_exit": 0
+          }
+        }
+      ],
+      "server_equivalence_on_tested_cases": false,
+      "original_checkpoint_preserved": true,
+      "output_file_sha256": {
+        "1-content.bin": "72d5fceb6365bfabd1b4306df4d806f251e0b0ebae73cc8004411d5ecdc5c561",
+        "generations.jsonl": "d5c1b103c35792c971143680ca0069a1e77151bdfe9aae13690795c3c91fec06",
+        "0-tokens.json": "985637136ba086abce2c593dd0694a9fe8ecc8709aab282429c1ef3d2243a0ff",
+        "meter-status.json": "33d68e258a44534f3cf028d002df510c4e00bd226a54b75a59f2fc6f60dcf5d4",
+        "0-content.bin": "e78c16a3a88154b89487bd39f110be27afc97c9ad9787496454c6dc25701af7a",
+        "calls.jsonl": "a86a5232a5a20463e28acb7d06d7213ac28d70fcc694263a164fac3f553f6a1b",
+        "1-tokens.json": "9983906f7aabc5d4c3678e44cd0fed92732318dfd59d05f151c416690de873b0"
+      },
+      "binary_sha256": "ef4252c07b9b7ca0260b87be8d50227420d1993869f7d592b2d982cb5ddf7ba1",
+      "source_sha256": "e02a6c466e8f42aa32b984d03e846ec981ac6b5074cc651675ce056f9c2cf269",
+      "qualification": "Two repeated development runtime probes; separate instrumented profile, not retrospective server forward totals or quality improvement."
+    },
+    "clover": {
+      "name": "clover",
+      "status": {
+        "completed_prompts": 2,
+        "prompt_tokens_submitted": 541,
+        "attempted_prefill_input_tokens": 541,
+        "attempted_decode_input_tokens": 1650,
+        "token_cap": 1024,
+        "temperature": 0,
+        "top_k": 1,
+        "seed": 42,
+        "n_batch_effective": 512,
+        "n_ubatch_effective": 256,
+        "n_ctx_effective": 4096,
+        "sampled_including_eog": 1652,
+        "emitted_tokens": 1651,
+        "prefill_api_calls": 2,
+        "decode_api_calls": 1650,
+        "prefill_graph_visits": 3,
+        "decode_graph_visits": 1650,
+        "undeclared_graph_visits": 0,
+        "process_exit": 0
+      },
+      "comparisons": [
+        {
+          "case_id": "000f1abde922ab8c0004",
+          "exact_server_content_sha_match": false,
+          "prompt_token_match": true,
+          "sampled_token_match": false,
+          "stop_kind_match": true,
+          "all_matches": false,
+          "observed": {
+            "prompt_index": 0,
+            "prompt_tokens": 64,
+            "sampled_including_eog": 628,
+            "emitted_tokens": 627,
+            "eog": true,
+            "prefill_api_calls": 1,
+            "decode_api_calls": 627,
+            "prefill_graph_visits": 1,
+            "decode_graph_visits": 627,
+            "api_exit": 0
+          }
+        },
+        {
+          "case_id": "04165c8e50f8574d5d57",
+          "exact_server_content_sha_match": false,
+          "prompt_token_match": true,
+          "sampled_token_match": true,
+          "stop_kind_match": true,
+          "all_matches": false,
+          "observed": {
+            "prompt_index": 1,
+            "prompt_tokens": 477,
+            "sampled_including_eog": 1024,
+            "emitted_tokens": 1024,
+            "eog": false,
+            "prefill_api_calls": 1,
+            "decode_api_calls": 1023,
+            "prefill_graph_visits": 2,
+            "decode_graph_visits": 1023,
+            "api_exit": 0
+          }
+        }
+      ],
+      "server_equivalence_on_tested_cases": false,
+      "original_checkpoint_preserved": true,
+      "output_file_sha256": {
+        "1-content.bin": "99a397256dbf00db722aaceb1dbc0e391c65cd067970dd68d8793439ed107134",
+        "generations.jsonl": "d994bb7e0dbbfb98b3849558fb7ff5489d27472801a0c6d85e1b03f065ea14f2",
+        "0-tokens.json": "5b7fff0239d5e571c85d71e7254897fa9e54ed3544ae1fd219ef181434956d06",
+        "meter-status.json": "92b6a327fdf030dc91514b37e71ed44227228c0edfb2046ad4693fd67a42d5e7",
+        "0-content.bin": "7f546e55d0ac64b327bd390fabaa3ba213f7366ae3a0ef758598f191237aa1b4",
+        "calls.jsonl": "82e04a3881383c76239f1f1496c5038f2df88d1a96f7270e03e774960999704b",
+        "1-tokens.json": "21b7c98ac0227f3e21ffd5f0e2f7efb4d65eaa207ef09286404231cdf5073ce1"
+      },
+      "binary_sha256": "99a152a16bce0d225fbdedbd07a7da6dae796b47be4e3da998f97be8bd8096ea",
+      "source_sha256": "e02a6c466e8f42aa32b984d03e846ec981ac6b5074cc651675ce056f9c2cf269",
+      "qualification": "Two repeated development runtime probes; separate instrumented profile, not retrospective server forward totals or quality improvement."
+    }
+  },
+  "meter_interpretation": "Both instrumented models complete call/graph accounting with preserved originals, but all4 content SHA comparisons against server references fail. Therefore these counts qualify only the separate instrumented profile, never retrospective server forward totals. Cause of numerical/output differences is not established.",
+  "repair": {
+    "exclusive_controller_receipt": "controller_claim.claim is called before any mutable status write; atomic O_EXCL prevents duplicate startup or reuse of a completed/interrupted destination.",
+    "fresh_directory": "cap-diagnostic-v2",
+    "protocol_sha256": "1b02701856ae5493d68426a39fd6493696c17e0f68f02bbe2915ff4d4cea86ea",
+    "worker_sha256": "ebd4452e09d6f0fe39b48e5ec07a02dc090019f69c7aeab013e5b4fb9b7b8392",
+    "fixed_development_selection_unchanged": true,
+    "maximum_generated_tokens": 32768,
+    "old_cap_inference_count": 0,
+    "prior_profile_output_hashes_verified": true
+  },
+  "verification": {
+    "concurrent_and_reuse_unittest_methods": 2,
+    "unittest_result": "passed",
+    "actual_duplicate_probe": {
+      "duplicate_exit": 1,
+      "duplicate_error": "FileExistsError",
+      "owner_receipt_unchanged": true,
+      "status_retains_live_owner_pid": true,
+      "first_controller_pid": 11859
+    },
+    "new_controller_live": true,
+    "source_and_input_hashes": "verified before launch"
+  },
+  "remaining": [
+    "Cap-v2 numerical diagnostic is in progress.",
+    "Native meter/server equivalence failed and remains unqualified; do not loosen exact criteria or regrade validation from this result.",
+    "BF16 and broader final/regression qualification remain open under existing-device resource limits."
+  ]
+}

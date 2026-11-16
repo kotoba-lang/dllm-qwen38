@@ -79,8 +79,88 @@ All raw run files and downloaded weights stay outside Git under the task evidenc
 /absolute/task-venv/bin/python tools/weight-space/test_surgery.py
 ```
 
-The operation is `W_new = W - strength * d * (d^T W)`, with a unit direction `d` in the residual output dimension. The tool clones or exclusively copies the original, preserves quantized layouts, re-encodes only declared tensors, and verifies the original checksum and every byte outside declared tensor ranges. Its journal records actual quantized deltas and before/after checksums. Test strength zero as a quantization sham before attributing any effect to an edit; match random-direction controls by their observed delta norm. Tests use tiny artificial GGUFs and prove mechanics, not model improvement. No target-model weight edit has been qualified yet.
+The operation is `W_new = W - strength * d * (d^T W)`, with a unit direction `d` in the residual output dimension. The tool clones or exclusively copies the original, preserves quantized layouts, re-encodes only declared tensors, and verifies the original checksum and every byte outside declared tensor ranges. Its journal records actual quantized deltas and before/after checksums. Use strength zero for a byte-preserving no-op. To measure encoding drift separately, set `requantize_only: true` with strength zero in an edit spec. A valid externally quantized tensor need not be a fixed point of this encoder: the published Clover Q4_0 tensor changed under the former zero-strength re-encoding path. Match random-direction controls by their observed delta norm and report the reference checkpoint explicitly. Tests use tiny artificial GGUFs and prove mechanics, not model improvement. Integrity checks alone do not establish a target-model performance gain.
 
 `capture.cpp` is a bounded observation helper built against the **same headers and libraries** as the pinned engine. It uses the public evaluation callback API, performs one explicit prefill call per input (which can contain several microbatch graphs), generates no tokens, and dumps only F32 residual tensors `l_out-31`, `l_out-35`, and `l_out-39`. It also counts first-layer normalization graph visits rather than confusing a prefill API call with one graph execution. `WSP_CAPTURE_DIR` must be an existing empty directory. Optionally, `WSP_CAPTURE_LIST` names a file containing at most eight local prompt-file paths, one per line. Each prompt is limited to 64 KiB and 4096 tokens. Cache state is cleared between inputs. Capture status, per-input counts, tensor shapes, prompt indexes and raw `.f32` files remain in the output directory. Use development prompts/prefixes only, count these observations against the forward budget, and verify file hashes and finite values before deriving a direction. The last tensor column is the final position within each microbatch; preserve callback and prompt indexes so that positions are not mixed.
 
-For a source directory `ENGINE_SOURCE` and its matching build directory `ENGINE_BUILD`, compile with C++17, include `common`, `include`, and `ggml/include` from that source, and link the build's `libllama-common`, `libllama`, `libggml`, and `libggml-base` dynamic libraries. On macOS add `-Wl,-rpath,ENGINE_BUILD/bin`. This helper adds no code to llama.cpp itself. Its initial functional check used an artificial 40-layer, hidden-width-8 CPU fixture and captured all three finite residual vectors; target MoE/GDN captures still require separate qualification.
+For a source directory `ENGINE_SOURCE` and its matching build directory `ENGINE_BUILD`, compile with C++17, include `common`, `include`, and `ggml/include` from that source, and link the build's `libllama-common`, `libllama`, `libggml`, and `libggml-base` dynamic libraries. On macOS add `-Wl,-rpath,ENGINE_BUILD/bin`. This helper adds no code to llama.cpp itself. Its initial functional check used an artificial 40-layer, hidden-width-8 CPU fixture and captured all three finite residual vectors; artificial fixture checks alone do not qualify target MoE/GDN captures.
+
+Use `capture_data.load_vectors()` to read the last nonempty residual for each prompt/layer. Early microbatches can legitimately have zero selected output rows; their empty tensors are counted rather than indexed as final vectors. Missing nonempty finals, inconsistent byte counts, unsupported layouts, nonfinite values, or API/graph accounting mismatches fail closed. The first real Qwen observation collected eight prefill API calls, 50 first-layer graph visits, 6139 input tokens, and 24 final vectors; the identical-prefix reset controls matched exactly. This qualifies that observation path only, not a causal edit or performance gain.
+
+The first Qwen selected-development screen used eight GSM8K cases, including the three direction-source cap hits. Original, zero-strength sham, layer39 strength0.25 projection and norm-matched random direction all scored 3/8 with 4383 generated tokens and three cap hits. The sham response text matched the original exactly. A separate concise-prompt control scored 7/8 with 668 tokens and no cap hits. This does not support promoting that weight candidate; the prompt result is exploratory and is not a weight-space gain. Full identities, paired results and integrity journals are in [the Qwen pilot report](../../reports/weight-space-qwen-pilot-20261103.json). Validation and final tests were not used.
+
+To reproduce a previously declared direction from saved captures, use `derive_direction.py`. Select the layer, pair indexes and consistency gate before looking at candidate scores. The command performs no inference, refuses a changed reset control, records every capture-file checksum, and writes no direction when the gate fails. Use a fresh output directory:
+
+```sh
+/absolute/task-venv/bin/python tools/weight-space/derive_direction.py \
+  --capture /absolute/evidence/observation/capture \
+  --output /absolute/evidence/rederived-direction \
+  --layer 39 --pairs 0:1 2:3 4:5 --reset 6:7 --min-mean-cosine 0.05
+```
+
+This command reproduces both saved target-pilot `.npy` direction hashes exactly; it does not add observations or demonstrate improvement.
+
+Use `collect.py` to produce a bundle for a complete, managed multi-condition experiment. It validates all case lists and stored summaries, recorded engine shutdown, dataset checksums, scorer revisions and paired engine profiles. It refuses incomplete runs and files that change during collection; it performs no inference or regrading. A plan names run directories relative to itself:
+
+```json
+{
+  "conditions": [
+    {"name": "original", "run": "runs/original"},
+    {"name": "no-op", "run": "runs/no-op"},
+    {"name": "candidate", "run": "runs/candidate"}
+  ],
+  "paired": [["original", "no-op"], ["original", "candidate"]],
+  "no_op": [["original", "no-op"]],
+  "qualification": "selected development diagnostic; not held-out improvement"
+}
+```
+
+```sh
+python3 tools/weight-space/collect.py /absolute/evidence/collection-plan.json \
+  --output /absolute/evidence/completed-bundle.json
+python3 tools/weight-space/test_collect.py
+```
+
+The collector adds scorer-revision and launch-profile checks beyond the current two-run `compare` command. Keep the recorded datasets and launch files available. Whole checkpoint files are not rehashed at collection time; their verified launch identities and artifact checksums are retained. A no-op entry records whether checkpoint hashes and response text agree, without counting a repeated answer as a new independent problem.
+
+`meter.cpp` is a separate bounded causal-generation observer. Build it against the same pinned headers/libraries as `capture.cpp`. It forces a fresh greedy sampler (temperature0, top-k1, seed42, neutral penalties), ignores sampler CLI overrides, disables warmup, clears memory for each input, rejects adapters/speculative/embedding modes, and requires an explicit output cap1..1024. `WSP_METER_LIST` optionally names up to eight local prompt files (each at most64KiB/4096 tokens); otherwise the raw CLI prompt is used. `WSP_METER_DIR` must be an existing empty directory. Verify checkpoint and binary/library checksums before invocation.
+
+```sh
+WSP_METER_DIR=/absolute/evidence/meter-output \
+WSP_METER_LIST=/absolute/evidence/prompt-files.txt \
+  /absolute/meter-binary -m /absolute/verified-model.gguf \
+  -c 4096 -b 512 -ub 256 -ngl 99 -t 6 -tb 6 --flash-attn on --fit off -n 16
+```
+
+The helper saves raw content bytes, sampled token IDs (including EOG), per-call trace and per-input/overall counts. Prefill API calls, single-token decode API calls, sampled/emitted tokens and observed `attn_norm-0` graph visits are distinct fields. Each call is synchronized and times host wall duration; this is not GPU-seconds. Any call without the expected graph marker or graph outside a declared call invalidates completion. Its artificial CPU fixture checks with both pinned SDKs used13 prefill calls/23 graphs plus9 decode calls/9 graphs, while emitting12 tokens across three inputs; identical-input replay matched. Caps outside1..1024, speculative mode and nonempty output were rejected. These checks do not qualify target MoE/GDN generation or equivalence to the HTTP server. The callback/synchronization also changes the timing profile. See [the meter fixture report](../../reports/weight-space-native-meter-fixture-20261104.json).
+
+The completed Clover hard-integer MATH selected-development screen scored2/8 original,2/8 true no-op,3/8 encoding-only,2/8 projection and3/8 norm-matched random. The no-op response text matches on all eight inputs. The projection has zero paired wins and one loss vs encoding-only. A separate concise-prompt condition scores7/8 with3390 tokens and no cap hits, but predicts614 instead of240 on one geometry case. The frozen projection candidate is not promoted to final evaluation; separately fixed validation measures its independent effects without further tuning. Full provenance and limitations are in [the Clover pilot report](../../reports/weight-space-clover-pilot-20261104.json).
+
+`uncertainty.py` provides a supplementary conservative interval without changing frozen bootstrap/McNemar outputs. For independent identically distributed problem pairs, win and loss counts have binomial marginals. Compute each marginal interval at97.5% confidence and subtract endpoints; the Bonferroni inequality gives at least95% joint coverage without requiring independence between the two indicators. This uses [NIST binomial-tail inversion](https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm) and the [general Bonferroni inequality](https://www.itl.nist.gov/div898/handbook/prc/section4/prc473.htm). It is not a tight exact paired-risk-difference interval or an across-model multiplicity adjustment.
+
+```sh
+python3 tools/weight-space/uncertainty.py /absolute/evidence/completed-bundle.json \
+  --output /absolute/evidence/supplementary-uncertainty.json
+python3 tools/weight-space/test_uncertainty.py
+```
+
+With no observed wins or losses, the empirical bootstrap can collapse to[0,0], while this construction gives approximately[-42.18pp,+42.18pp] at n8 and[-12.80pp,+12.80pp] at n32. Failure-selected development screens do not satisfy the population-sampling assumptions; these intervals illustrate finite-sample uncertainty and do not qualify regression absence. The primary analyses remain unchanged. Published examples, independent Decimal tail residuals, boundary formulas and a finite coverage grid are checked in the test. See [the supplementary report](../../reports/weight-space-uncertainty-diagnostics-20261104.json).
+
+
+`symbolic_score.py` is a separate boxed-answer prototype for future fraction/expression evaluation. It does not change or regrade the running numeric benchmark. Install its five core wheels in a separate Python environment using `requirements-symbolic.lock` with `pip --require-hashes`; keep the active inference environment unchanged. It extracts the final balanced top-level `\boxed{...}` outside balanced thinking, rejects incomplete formats, and uses the pinned Math-Verify LaTeX parser without raw-string fallback. Explicit comparator settings are rounding12, precision30, strict comparison and no set/relation coercion. These settings do not define a uniform numeric tolerance or a formal equality proof. Internal grader failures return unavailable rather than a wrong-answer score.
+
+Run `test_symbolic_score.py` in that environment for synthetic fractions, radicals, sets, expressions, incorrect near-values and thinking/box boundaries. The parser requires the main thread for POSIX alarms; each operation has its own five-second limit, and direct calls still need a process deadline. Use `symbolic_process.score_isolated()` from that same pinned environment to execute imports, parsing and comparison in a child main thread with a default20-second deadline (maximum60). On timeout it kills and reaps its child and returns unavailable, preserving the distinction from incorrect answers. OS process creation/termination has overhead, so this is not a real-time scheduling guarantee. Three wrapper tests verify real symbolic child scoring, deadline termination and invalid-input rejection. This prototype has not been qualified against full MATH, official scoring, or target-model symbolic outputs. No final dataset was fetched. See [the synthetic-only receipt](../../reports/weight-space-symbolic-grader-prototype-20261104.json).
+
+
+`split_audit.py --dev DEV_JSON... --validation VALIDATION_JSON... --output NEW_REPORT` checks only explicitly supplied train-derived splits. It fixes NFKC/casefold/whitespace normalization, a digit-masked exact comparison and five-token shingle Jaccard at0.80 before inspecting results. Reports contain file hashes, pair counts and flagged IDs, never question/reference text. The64 development and64 validation cases across the two existing lanes yield4096 cross-split pairs and zero lexical flags. This does not prove semantic disjointness or absence of pretraining contamination. No splits or candidates were changed. Two synthetic controls test numeric-template detection and report redaction. See [the split-audit receipt](../../reports/weight-space-train-split-audit-20261104.json).
+
+
+Clover's frozen GSM8K train-derived validation32 is complete: original, encoding-only and projection each score30/32, with zero paired correctness changes and one extraction failure each. Tokens are5944/5693/5721 respectively; the projection does not outperform the encoding-only reference. The separate prompt condition scores31/32 with2094 tokens. All four engines stopped, and a second strict collection reproduces the entire bundle exactly. This does not establish equivalence, efficiency or final-test improvement. See [the Clover GSM8K validation report](../../reports/weight-space-clover-gsm8k-validation-20261104.json).
+
+
+All four frozen numerical validation groups are complete. Clover hard-integer MATH32 scores15/32 original,13/32 encoding-only and14/32 projection, with0 wins/1 loss versus original. The separate prompt control scores21/32. Projection cap hits16 and extraction failures17 also fail to improve on original15/16. This is diagnostic No-go evidence for this candidate/profile, with no final-test promotion or population harm claim. A second strict collection matches exactly. All16 numerical-phase jobs completed,456 requests generated212035 tokens within the466944 ceiling, and all managed engines stopped with exit0. See [the Clover MATH validation report](../../reports/weight-space-clover-math-validation-20261104.json).
+
+
+`controller_claim.claim()` atomically reserves a controller directory before any mutable status write. Duplicate launches fail without changing the existing owner's status. Receipts remain after completion or interruption; use a fresh directory for recovery. Two real competing-process/reuse tests pass, and an intentional duplicate of the recovered cap controller is rejected while its original owner remains live. This fixes a shared-status collision between two meter controllers that prevented the original cap diagnostic from starting. Original outputs remain preserved; the same fixed development cap protocol now runs in a fresh directory.
+
+The completed instrumented target probes count API calls/graph visits, but all four exact response-SHA comparisons to the HTTP server fail. Qwen observes2 prefill calls/2 graphs and1364 decode calls/graphs; Clover observes2 prefill calls/3 graphs and1650 decode calls/graphs. These are separate instrumented-profile measurements and cannot be substituted for prior server-forward totals. The numerical cause is still unqualified. See [the controller recovery and meter result](../../reports/weight-space-controller-recovery-20261104.json).

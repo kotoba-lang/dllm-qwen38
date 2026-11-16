@@ -1,0 +1,180 @@
+{
+  "issue": "JUN-799",
+  "date": "2026-11-04",
+  "status": "completed original-checkpoint rollback replay for both models",
+  "models": {
+    "qwen": {
+      "identity": {
+        "schema": "wsp.local-run/v1",
+        "data_sha256": "035ab53d19ecbacdbfe50ca3ac6465ced97efa1df5311b78ecb9d8f39153c473",
+        "case_ids": [
+          "00011069db164cff296a",
+          "000ecce14264e8b4ef50",
+          "002c706edc1e06cd87a6",
+          "003cbd7949bf26948b45"
+        ],
+        "split": "dev",
+        "settings": {
+          "n_predict": 1024,
+          "temperature": 0.0,
+          "top_k": 1,
+          "top_p": 1.0,
+          "min_p": 0.0,
+          "repeat_penalty": 1.0,
+          "presence_penalty": 0.0,
+          "frequency_penalty": 0.0,
+          "seed": 42,
+          "cache_prompt": false,
+          "stream": false
+        },
+        "thinking": "off",
+        "backend_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b",
+        "server_context": 4096,
+        "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+        "condition": "qwen-post-pilot-rollback4",
+        "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+      },
+      "summary": {
+        "n": 4,
+        "correct": 2,
+        "accuracy": 0.5,
+        "wall_seconds": 48.094936876092106,
+        "generated_tokens": 1792,
+        "seconds_per_correct": 24.047468438046053,
+        "tokens_per_correct": 896.0,
+        "limit_hits": 1,
+        "no_final_answer": 1
+      },
+      "engine_sha256": "2f66124c98a00ee3cd7e0728442604d7bac1d2ff718bb1007ec0349e0ecb5812",
+      "engine_args": [
+        "-c",
+        "4096",
+        "-np",
+        "1",
+        "-b",
+        "512",
+        "-ub",
+        "256",
+        "-ngl",
+        "99",
+        "-t",
+        "6",
+        "-tb",
+        "6",
+        "--poll",
+        "0",
+        "--flash-attn",
+        "on",
+        "--no-warmup",
+        "--fit",
+        "off",
+        "--no-webui"
+      ],
+      "process": {
+        "started_utc": "2026-11-03T15:47:56.945475+00:00",
+        "state": "completed",
+        "engine_exit_code": 0,
+        "engine_stopped": true,
+        "ended_utc": "2026-11-03T15:49:18.167872+00:00"
+      },
+      "proof": {
+        "n": 4,
+        "exact_response_replay": true,
+        "reference_results_sha256": "39e1fcf0717c623a31f0da03947968b98004b2e2984fe25a0d7ab8d58f690a6d",
+        "rollback_results_sha256": "6fd9972c4d17e2234c5d5a002c0ad84da77ef1904cf92a8b3938c35f3ee74cc0",
+        "note": "Repeated development cases for rollback mechanics, not independent samples"
+      },
+      "prompt_sha_and_response_replay_exact": true,
+      "launch_sha256": "46e7268034ff472723e27c8da16a09ccb4464ca3d478cb00b7a86753c77c2fba",
+      "manifest_sha256": "aa4de2866ecf1a7121a5c954272d358b7abd5ce2ed851d0f4f0ac72f6b2285a8"
+    },
+    "clover": {
+      "identity": {
+        "schema": "wsp.local-run/v1",
+        "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+        "case_ids": [
+          "000f1abde922ab8c0004",
+          "005bd82447f9945a2b87",
+          "00ca5df429d4dd9925aa",
+          "010929c71f83399ac2f2"
+        ],
+        "split": "exploratory-dev-selected-screen",
+        "settings": {
+          "n_predict": 1024,
+          "temperature": 0.0,
+          "top_k": 1,
+          "top_p": 1.0,
+          "min_p": 0.0,
+          "repeat_penalty": 1.0,
+          "presence_penalty": 0.0,
+          "frequency_penalty": 0.0,
+          "seed": 42,
+          "cache_prompt": false,
+          "stream": false
+        },
+        "thinking": "off",
+        "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+        "server_context": 4096,
+        "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+        "condition": "clover-post-pilot-rollback4",
+        "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+      },
+      "summary": {
+        "n": 4,
+        "correct": 2,
+        "accuracy": 0.5,
+        "wall_seconds": 240.9164271671325,
+        "generated_tokens": 3483,
+        "seconds_per_correct": 120.45821358356625,
+        "tokens_per_correct": 1741.5,
+        "limit_hits": 2,
+        "no_final_answer": 2
+      },
+      "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+      "engine_args": [
+        "-c",
+        "4096",
+        "-np",
+        "1",
+        "-b",
+        "512",
+        "-ub",
+        "256",
+        "-ngl",
+        "99",
+        "-t",
+        "6",
+        "-tb",
+        "6",
+        "--poll",
+        "0",
+        "--flash-attn",
+        "on",
+        "--no-warmup",
+        "--fit",
+        "off",
+        "--no-webui",
+        "--n-cpu-moe",
+        "4"
+      ],
+      "process": {
+        "started_utc": "2026-11-03T15:49:30.471953+00:00",
+        "state": "completed",
+        "engine_exit_code": 0,
+        "engine_stopped": true,
+        "ended_utc": "2026-11-03T15:53:46.907225+00:00"
+      },
+      "proof": {
+        "n": 4,
+        "exact_response_replay": true,
+        "reference_results_sha256": "954296bcb511f50c76c698f2a135258da042bae71198eb682f088743edc27924",
+        "rollback_results_sha256": "c805aabaeeba725a885472995a2eae4245f2cebb33d349b7b39970160867416d",
+        "note": "Repeated development cases for rollback mechanics, not independent samples"
+      },
+      "prompt_sha_and_response_replay_exact": true,
+      "launch_sha256": "f3f17f55a2c181f4bcaf28201e9d7de247c746af8481a0f96cc1db8fa615705e",
+      "manifest_sha256": "8f57d4b0ea549e3975be22085f61c67a25953e4cc529b399a71a38033abfbb8e"
+    }
+  },
+  "qualification": "Four repeated development cases per model. Confirms the tested reset/reload path; not an independent quality estimate or full regression suite."
+}

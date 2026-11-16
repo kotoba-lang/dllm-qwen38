@@ -1,0 +1,89 @@
+{
+  "issue": "JUN-801",
+  "status": "pre-generation control failure detected and corrected; no Clover screen responses generated",
+  "discovery": "A zero-strength projection re-encoded the published Q4_0 values, which are not fixed points of the NumPy encoder. The former sham is an encoding-only control, not a bit-identical no-op.",
+  "old_zero_strength_journal": {
+    "state": "complete",
+    "source_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+    "spec_sha256": "79d456e857a8fd9b3ba8db4033a2d934aab36985ff5f7b87154b608be4711f48",
+    "hypothesis": "Exploratory rechecking-axis removal from the last shared expert; no new math capability claim",
+    "edits": [
+      {
+        "tensor": "blk.39.ffn_down_shexp.weight",
+        "type": "Q4_0",
+        "shape": [
+          512,
+          2048
+        ],
+        "strength": 0.0,
+        "direction_sha256": "ac9e543e2d4aea153e960b42394786fb8ca728e1ae520dfa3772ec6ae8e67eb0",
+        "parameters_touched": 1048576,
+        "logical_values_changed": 169378,
+        "delta_l2": 0.27761775255203247,
+        "relative_delta_l2": 0.03769638389348984,
+        "projection_norm_before": 0.3795832097530365,
+        "projection_norm_after": 0.3777942657470703,
+        "byte_range": [
+          19281036704,
+          19281626528
+        ]
+      }
+    ],
+    "copy_method": "APFS clonefile",
+    "candidate_sha256": "4b574153f571cf7305cbe1feafcc9c13c9fd8c5dd4dd6f44c1d797aa6048b99b",
+    "unchanged_ranges_sha256": "c95a3804473a744b5006dd9873798de332868b92fbd5931827af5e8d34aa9e76",
+    "original_preserved": true,
+    "bytes_outside_declared_tensors_equal": true
+  },
+  "candidate_journal": {
+    "state": "complete",
+    "source_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+    "spec_sha256": "6ef68356ec6aa5cd2c595431168a97b4ffdcf497d0b3c3516d857e2659c37fcd",
+    "hypothesis": "Exploratory rechecking-axis removal from the last shared expert; no new math capability claim",
+    "edits": [
+      {
+        "tensor": "blk.39.ffn_down_shexp.weight",
+        "type": "Q4_0",
+        "shape": [
+          512,
+          2048
+        ],
+        "strength": 0.25,
+        "direction_sha256": "ac9e543e2d4aea153e960b42394786fb8ca728e1ae520dfa3772ec6ae8e67eb0",
+        "parameters_touched": 1048576,
+        "logical_values_changed": 725959,
+        "delta_l2": 0.28411421179771423,
+        "relative_delta_l2": 0.03857850655913353,
+        "projection_norm_before": 0.3795832097530365,
+        "projection_norm_after": 0.3541329503059387,
+        "byte_range": [
+          19281036704,
+          19281626528
+        ]
+      }
+    ],
+    "copy_method": "APFS clonefile",
+    "candidate_sha256": "87ed108a00aaea988e0b063af305d9c06df4ec90198ccf735781d8a8a055669d",
+    "unchanged_ranges_sha256": "c95a3804473a744b5006dd9873798de332868b92fbd5931827af5e8d34aa9e76",
+    "original_preserved": true,
+    "bytes_outside_declared_tensors_equal": true
+  },
+  "preservation": "Stopped only verified task worker 72353; exec session78425 confirmed exit130. Saved captures and all original/candidate artifacts retained; interrupted random copy is not used.",
+  "fix": "Default strength0 retains encoded tensor bytes. Explicit requantize_only:true with strength0 is separately journaled and performs encoding control.",
+  "verification": "Two surgery tests pass across F32/Q4_0/Q8_0, including a legal noncanonical Q4_0 block that changes numerically on re-encoding. True no-op preserves complete SHA; explicit re-encode differs; original remains unchanged.",
+  "revised_before_any_clover_scores": {
+    "variants": [
+      "baseline original",
+      "true byte-preserving no-op",
+      "requantization-only",
+      "projection025",
+      "random matched to incremental delta relative to requantization-only",
+      "original + concise prompt"
+    ],
+    "n_cases": 8,
+    "inputs": "same predeclared Clover selected-development cases",
+    "primary_attribution": "Compare projection and random to encoding-only control as well as original; report both original-relative and encoding-control-relative deltas.",
+    "reason": "Projection vs original alone would mix projection with quantization drift.",
+    "no_new_capture_or_direction_search": true
+  }
+}

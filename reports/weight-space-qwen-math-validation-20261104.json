@@ -1,0 +1,441 @@
+{
+  "issue": "JUN-800",
+  "date": "2026-11-04",
+  "status": "completed Qwen frozen-candidate hard-integer MATH train-derived validation32",
+  "scope": "Fixed level4/5 integer-answer subset, disjoint from edit development; not full MATH or final test. No further weight tuning from outputs.",
+  "protocol_sha256": "e1f6a1dc8613aec7cac53863d68bfdcf9c2dddfed55d3410bb588a31a20a0377",
+  "bundle_sha256": "f4413d7936ab6becd736e29f237a15052c90d1922a072a8ef12d28d32870899b",
+  "bundle": {
+    "schema": "wsp.completed-run-bundle/v1",
+    "plan_sha256": "e6600c2b93aa6d04c976d9ca2b51d3483c70ec877f77a730d12ee03d73548268",
+    "collector_sha256": "34c7d3ca06fe63ce24f6c95e036e9a271bb8443b3e85e3186d74cb129d63a277",
+    "comparison_code_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9",
+    "qualification": "frozen-candidate independent train-derived validation; not final test or full regression qualification",
+    "runs": {
+      "original": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+          "case_ids": [
+            "041c58ac73e48f2daab6",
+            "04281fe296443d8a704c",
+            "042fef09efad3090f681",
+            "0437384a7c7591b1a738",
+            "0450826faa08d20e33bc",
+            "045e2373cc24d189cd69",
+            "0462f5ab348f2bef7aed",
+            "0465ab973142cb81b56a",
+            "048be0f7fd5645cba6f0",
+            "048eefaa11e0fb887b12",
+            "04e89fdaa1e900d6edc1",
+            "04fbc8a1a2f066245c86",
+            "05304c8194de00e06077",
+            "054ece40cabb9d8e9619",
+            "05befb9463cd3483627b",
+            "05c74cc3bf93630b6cc1",
+            "05d7a3a9f8a2369c574f",
+            "05ec6f6ac1776bff0766",
+            "0624eddddd8b513bd7cc",
+            "0653a0ed3fdab1276370",
+            "065469fc13b7709aa66c",
+            "0674f7860fe650bab170",
+            "06c7e818c1d42b3fa632",
+            "06fe9ab7bc6d7bc57835",
+            "071bac51d16c43496f5c",
+            "07287c7a93766c592d87",
+            "0768b378947bbcb81c27",
+            "07a411ab404a3c64334d",
+            "07d8f66764a3978684f6",
+            "07e793beb76b03628d1a",
+            "07ec2493170e5e5126f5",
+            "07ff07d8e9df568e7512"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b",
+          "server_context": 4096,
+          "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+          "condition": "independent-validation-qwen-math-integer-original",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 14,
+          "accuracy": 0.4375,
+          "wall_seconds": 1108.4157149160746,
+          "generated_tokens": 27117,
+          "seconds_per_correct": 79.17255106543391,
+          "tokens_per_correct": 1936.9285714285713,
+          "limit_hits": 18,
+          "no_final_answer": 18
+        },
+        "artifact_sha256": {
+          "manifest.json": "edc1b303e521c918ed49fecec9d59ec685f25449dd60cf1ef410dbaab2522976",
+          "launch.json": "9abc1b2befa9e6e6a4105916efab0a501741fc8cdf51289a35e81f63d647277b",
+          "process-status.json": "b6575162ba9a6ce42ae1e23b11bfac2220cde060be850b0b3d73821cb103ea25",
+          "results.jsonl": "94ac678ce91755f204f58a8b6097575c71557212c82411bf688c8e69b2e998f2",
+          "summary.json": "aee71291e990daece67d8b12d6d60a960de964aa6554e37eb2c0059c31fa56e6"
+        },
+        "runtime": {
+          "engine_sha256": "2f66124c98a00ee3cd7e0728442604d7bac1d2ff718bb1007ec0349e0ecb5812",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui"
+          ],
+          "backend_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "projection025": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "4c7bc2dd92a558608de8a913dafb73454ebc49a8a4481ef3550be501f89610cb",
+          "case_ids": [
+            "041c58ac73e48f2daab6",
+            "04281fe296443d8a704c",
+            "042fef09efad3090f681",
+            "0437384a7c7591b1a738",
+            "0450826faa08d20e33bc",
+            "045e2373cc24d189cd69",
+            "0462f5ab348f2bef7aed",
+            "0465ab973142cb81b56a",
+            "048be0f7fd5645cba6f0",
+            "048eefaa11e0fb887b12",
+            "04e89fdaa1e900d6edc1",
+            "04fbc8a1a2f066245c86",
+            "05304c8194de00e06077",
+            "054ece40cabb9d8e9619",
+            "05befb9463cd3483627b",
+            "05c74cc3bf93630b6cc1",
+            "05d7a3a9f8a2369c574f",
+            "05ec6f6ac1776bff0766",
+            "0624eddddd8b513bd7cc",
+            "0653a0ed3fdab1276370",
+            "065469fc13b7709aa66c",
+            "0674f7860fe650bab170",
+            "06c7e818c1d42b3fa632",
+            "06fe9ab7bc6d7bc57835",
+            "071bac51d16c43496f5c",
+            "07287c7a93766c592d87",
+            "0768b378947bbcb81c27",
+            "07a411ab404a3c64334d",
+            "07d8f66764a3978684f6",
+            "07e793beb76b03628d1a",
+            "07ec2493170e5e5126f5",
+            "07ff07d8e9df568e7512"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b",
+          "server_context": 4096,
+          "model_sha256": "23f9178a90a986c65471108becabe0d96525dc65cb12161f4dcd72ea047cb109",
+          "condition": "independent-validation-qwen-math-integer-projection025",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 14,
+          "accuracy": 0.4375,
+          "wall_seconds": 1102.7495359571185,
+          "generated_tokens": 27242,
+          "seconds_per_correct": 78.76782399693704,
+          "tokens_per_correct": 1945.857142857143,
+          "limit_hits": 18,
+          "no_final_answer": 18
+        },
+        "artifact_sha256": {
+          "manifest.json": "883f03c096ec080fbc2f023b9c8be6880e11c0e6dfb5c008ae81b0f5d2817104",
+          "launch.json": "045e496bf7cb70c1be9a95e093cf75a28f62cfaa018aafb65922d475ec30db38",
+          "process-status.json": "7a3db7496224795974e7a86decb930c03e9688a6dde1b52020516f8231ee5b29",
+          "results.jsonl": "4ae4f54fec0f5e06f519c457de1d0ca33dbc869047167557f756ffdfd44c13ff",
+          "summary.json": "79ee742e36e36ac2b1c0e709c7563695487030369463d4807806f0d4870e3896"
+        },
+        "runtime": {
+          "engine_sha256": "2f66124c98a00ee3cd7e0728442604d7bac1d2ff718bb1007ec0349e0ecb5812",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui"
+          ],
+          "backend_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "prompt-concise": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "a4d39cdcc312d1b22f00052553f76123484c6c942fe80b76e953a0ae8124c3c1",
+          "case_ids": [
+            "041c58ac73e48f2daab6",
+            "04281fe296443d8a704c",
+            "042fef09efad3090f681",
+            "0437384a7c7591b1a738",
+            "0450826faa08d20e33bc",
+            "045e2373cc24d189cd69",
+            "0462f5ab348f2bef7aed",
+            "0465ab973142cb81b56a",
+            "048be0f7fd5645cba6f0",
+            "048eefaa11e0fb887b12",
+            "04e89fdaa1e900d6edc1",
+            "04fbc8a1a2f066245c86",
+            "05304c8194de00e06077",
+            "054ece40cabb9d8e9619",
+            "05befb9463cd3483627b",
+            "05c74cc3bf93630b6cc1",
+            "05d7a3a9f8a2369c574f",
+            "05ec6f6ac1776bff0766",
+            "0624eddddd8b513bd7cc",
+            "0653a0ed3fdab1276370",
+            "065469fc13b7709aa66c",
+            "0674f7860fe650bab170",
+            "06c7e818c1d42b3fa632",
+            "06fe9ab7bc6d7bc57835",
+            "071bac51d16c43496f5c",
+            "07287c7a93766c592d87",
+            "0768b378947bbcb81c27",
+            "07a411ab404a3c64334d",
+            "07d8f66764a3978684f6",
+            "07e793beb76b03628d1a",
+            "07ec2493170e5e5126f5",
+            "07ff07d8e9df568e7512"
+          ],
+          "split": "validation",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b",
+          "server_context": 4096,
+          "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+          "condition": "independent-validation-qwen-math-integer-prompt-concise",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 32,
+          "correct": 21,
+          "accuracy": 0.65625,
+          "wall_seconds": 873.4802867486142,
+          "generated_tokens": 18514,
+          "seconds_per_correct": 41.59429936898162,
+          "tokens_per_correct": 881.6190476190476,
+          "limit_hits": 11,
+          "no_final_answer": 11
+        },
+        "artifact_sha256": {
+          "manifest.json": "df2d3cb3760859947681ccd3a09d237f9373da05ee370417d66fb827b7df5294",
+          "launch.json": "a47c1b05783bda004315c152a6c29e0c16e650c893a1c85d0d00a3a5fad0201c",
+          "process-status.json": "2c371496e77f5acce1ece8ef9f9712b9ee4b76de9177ef58c4900116e7342c99",
+          "results.jsonl": "fd45de38962cd9d4460182240f151fa65b5c765bccc415808da2ea4c2d4a03b3",
+          "summary.json": "385ebc694be5d80526e8753b5dca8d52188aaa541dc4f9a7349564cbbd92edc5"
+        },
+        "runtime": {
+          "engine_sha256": "2f66124c98a00ee3cd7e0728442604d7bac1d2ff718bb1007ec0349e0ecb5812",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui"
+          ],
+          "backend_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      }
+    },
+    "paired": [
+      {
+        "baseline": "original",
+        "candidate": "projection025",
+        "result": {
+          "baseline": {
+            "n": 32,
+            "correct": 14,
+            "accuracy": 0.4375,
+            "wall_seconds": 1108.4157149160746,
+            "generated_tokens": 27117,
+            "seconds_per_correct": 79.17255106543391,
+            "tokens_per_correct": 1936.9285714285713,
+            "limit_hits": 18,
+            "no_final_answer": 18
+          },
+          "candidate": {
+            "n": 32,
+            "correct": 14,
+            "accuracy": 0.4375,
+            "wall_seconds": 1102.7495359571185,
+            "generated_tokens": 27242,
+            "seconds_per_correct": 78.76782399693704,
+            "tokens_per_correct": 1945.857142857143,
+            "limit_hits": 18,
+            "no_final_answer": 18
+          },
+          "paired_accuracy_delta": 0.0,
+          "bootstrap_95_interval": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      }
+    ],
+    "no_op": [],
+    "limitations": [
+      "Stored grades and measured timing are aggregated; no new inference or regrading.",
+      "Completion records and hashes are checked; model files are not rehashed by this read-only collector.",
+      "Small or selected development subsets do not establish held-out improvement."
+    ]
+  },
+  "supplementary_uncertainty": {
+    "schema": "wsp.supplementary-uncertainty/v1",
+    "source_bundle_sha256": "f4413d7936ab6becd736e29f237a15052c90d1922a072a8ef12d28d32870899b",
+    "analysis_code_sha256": "9b7e7925f1c4769a44ee20b3c4d46b25d4c97917c234f116c82cce6bcfe5f94c",
+    "comparisons": [
+      {
+        "n": 32,
+        "wins": 0,
+        "losses": 0,
+        "observed_delta": 0.0,
+        "confidence": 0.95,
+        "interval": [
+          -0.1279759998407964,
+          0.1279759998407964
+        ],
+        "marginal_confidence": 0.975,
+        "win_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "loss_interval": [
+          0.0,
+          0.1279759998407964
+        ],
+        "baseline": "original",
+        "candidate": "projection025",
+        "frozen_bootstrap_interval": [
+          0.0,
+          0.0
+        ],
+        "frozen_mcnemar_p": 1.0
+      }
+    ],
+    "method": "Binomial-tail inversion for win/loss marginals, each at1-alpha/2 confidence; subtract endpoints using Bonferroni joint coverage.",
+    "references": [
+      "https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm",
+      "https://www.itl.nist.gov/div898/handbook/prc/section4/prc473.htm"
+    ],
+    "qualifications": [
+      "Supplementary sensitivity analysis; frozen bootstrap and McNemar outputs are retained, not replaced.",
+      "Coverage requires independent identically distributed problem pairs. Failure-selected development screens do not justify population inference.",
+      "This conservative interval is not a tight exact paired-risk-difference interval.",
+      "Confidence is per comparison, not adjusted across model, trial or benchmark families.",
+      "No new inference or regrading."
+    ]
+  },
+  "decision": "Original/projection both14/32,zero paired wins/losses and18 cap/extraction failures each. Projection uses125 more generated tokens (27117 to27242). No observed accuracy, termination or efficiency gain. Prompt-only21/32,18514 tokens and11 cap/extraction failures is a separate condition.",
+  "limitations": [
+    "Quantized greedy non-thinking causal AR with1024 output cap; not BF16 or recommended model-card sampling.",
+    "All wrong numeric scores here are missing extracted FINAL answers; this is a capped diagnostic, not intrinsic mathematical accuracy.",
+    "No observed correctness changes on32 cases do not prove population equivalence or noninferiority. Primary empirical bootstrap[0,0] is retained; supplementary conservative interval is about\u00b112.80pp under iid paired-case assumptions.",
+    "No pretraining-data absence or semantic near-duplicate exclusion is established.",
+    "Single-run timings are descriptive and GPU-seconds/full server graph counts remain unmeasured.",
+    "Clover numerical validation,official final test and code/Japanese/knowledge regression qualification remain incomplete."
+  ]
+}

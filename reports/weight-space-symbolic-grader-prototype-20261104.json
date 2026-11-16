@@ -1,0 +1,82 @@
+{
+  "issue": "JUN-799",
+  "date": "2026-11-04",
+  "profile": "boxed-math-verify-0.9.0-round12-v1",
+  "scope": "Synthetic boxed-answer scorer prototype only; no target-model evaluation or final dataset access.",
+  "dependencies": [
+    {
+      "name": "antlr4-python3-runtime",
+      "version": "4.13.2",
+      "filename": "antlr4_python3_runtime-4.13.2-py3-none-any.whl",
+      "sha256": "fe3835eb8d33daece0e799090eda89719dbccee7aa39ef94eed3818cafa5a7e8",
+      "size": 144462
+    },
+    {
+      "name": "latex2sympy2_extended",
+      "version": "1.11.0",
+      "filename": "latex2sympy2_extended-1.11.0-py3-none-any.whl",
+      "sha256": "aebb77d52ce269e25028e4bea89ddb14d242ba36bcf7b636496fb5fd9728d234",
+      "size": 209050
+    },
+    {
+      "name": "math-verify",
+      "version": "0.9.0",
+      "filename": "math_verify-0.9.0-py3-none-any.whl",
+      "sha256": "3703e7c4885354027fa84409d762a596a2906d1fd4deb78361876bd905a76194",
+      "size": 29967
+    },
+    {
+      "name": "mpmath",
+      "version": "1.3.0",
+      "filename": "mpmath-1.3.0-py3-none-any.whl",
+      "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+      "size": 536198
+    },
+    {
+      "name": "sympy",
+      "version": "1.14.0",
+      "filename": "sympy-1.14.0-py3-none-any.whl",
+      "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+      "size": 6299353
+    }
+  ],
+  "requirements_sha256": "9dec5e44ea32cf4a150935f19355fec992e36a68b20784f0b3b42a2257d6da38",
+  "environment": "Separate Python 3.12 environment; no changes to active numeric validation environment.",
+  "installation": "Five core wheels only, SHA-256 verified against PyPI release metadata, installed offline; no inference extras.",
+  "parameters": {
+    "extraction": "last balanced top-level boxed expression outside balanced thinking",
+    "parser": "LatexExtractionConfig only; boxed priority 0; first_match; no_fallback",
+    "float_rounding": 12,
+    "numeric_precision": 30,
+    "strict": true,
+    "allow_set_relation_comp": false,
+    "per_operation_timeout_seconds": 5
+  },
+  "checks": {
+    "unittest_methods": 2,
+    "synthetic_equivalence_and_disagreement_cases": 8,
+    "thinking_and_box_format_cases": 9,
+    "result": "passed"
+  },
+  "calibration_correction": "An initial expectation that 0.9999999999999 would equal 1 was rejected by the pinned comparator. The test now documents that rejection; rounding is not treated as a uniform numeric tolerance.",
+  "limitations": [
+    "Synthetic calibration only; not official MATH scoring compatibility qualification.",
+    "Symbolic/numeric comparator is heuristic, not a formal proof of equality.",
+    "POSIX alarm timeouts require main thread; a process deadline is still needed for a hard whole-case budget.",
+    "Internal grader exceptions return unavailable, not false; malformed reference raises.",
+    "Existing FINAL-number benchmark and frozen running files are unchanged; no previous results were regraded.",
+    "No MATH-500 or other final questions, references or target outputs were fetched for this unit."
+  ],
+  "source_discrepancy": {
+    "source": "math-verify 0.9.0 parser.py parse",
+    "code": "parsing_timeout default is 5",
+    "docstring": "states default 3",
+    "handling": "Adapter explicitly sets 5; upstream files unchanged."
+  },
+  "references": [
+    "https://github.com/huggingface/Math-Verify",
+    "https://pypi.org/pypi/math-verify/0.9.0/json"
+  ],
+  "readme_reference_commit": "ba3d3aaff23b3f4cac7a14672b4f6e293d97c98b",
+  "source_identity_note": "Executed package identity is the wheel SHA; documentation commit is not asserted identical to the wheel."
+}

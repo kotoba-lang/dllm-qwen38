@@ -86,7 +86,10 @@ def apply(source, expected_sha256, output, spec_path):
         strength = float(item["strength"])
         if not np.isfinite(strength) or not 0 <= strength <= 1:
             raise ValueError("strength must be in [0, 1]")
-        plans.append((tensor, direction / norm, strength, digest(path)))
+        requantize = item.get("requantize_only", False)
+        if type(requantize) is not bool or (requantize and strength != 0):
+            raise ValueError("requantize_only requires a boolean and zero strength")
+        plans.append((tensor, direction / norm, strength, digest(path), requantize))
     journal_path = pathlib.Path(str(output) + ".edit.json")
     journal = {"state": "preparing", "source_sha256": expected_sha256,
                "spec_sha256": digest(spec_path), "hypothesis": spec["hypothesis"], "edits": []}
@@ -99,13 +102,18 @@ def apply(source, expected_sha256, output, spec_path):
         candidate = gguf.GGUFReader(output, "r+")
         candidate_tensors = {t.name: t for t in candidate.tensors}
         ranges = []
-        for tensor, direction, strength, direction_hash in plans:
+        for tensor, direction, strength, direction_hash, requantize in plans:
             weights = gguf.dequantize(tensor.data, tensor.tensor_type)
             if not np.isfinite(weights).all() or np.linalg.norm(weights) == 0:
                 raise ValueError("source tensor must be finite and nonzero")
             before_projection = direction @ weights
-            edited = weights - strength * np.outer(direction, before_projection)
-            encoded = gguf.quantize(edited, tensor.tensor_type)
+            if strength == 0 and not requantize:
+                # A valid externally quantized block need not be a fixed point of
+                # this encoder. A true no-op must retain its encoded bytes.
+                encoded = tensor.data.copy()
+            else:
+                edited = weights - strength * np.outer(direction, before_projection)
+                encoded = gguf.quantize(edited, tensor.tensor_type)
             dest = candidate_tensors[tensor.name]
             if encoded.shape != dest.data.shape or encoded.dtype != dest.data.dtype:
                 raise ValueError("encoded tensor layout changed")
@@ -114,6 +122,7 @@ def apply(source, expected_sha256, output, spec_path):
             delta = restored - weights
             journal["edits"].append({"tensor": tensor.name, "type": tensor.tensor_type.name,
                 "shape": tensor.shape.tolist(), "strength": strength, "direction_sha256": direction_hash,
+                "operation": "requantize_only" if requantize else ("no_op" if strength == 0 else "projection"),
                 "parameters_touched": int(weights.size), "logical_values_changed": int(np.count_nonzero(delta)),
                 "delta_l2": float(np.linalg.norm(delta)), "relative_delta_l2": float(np.linalg.norm(delta) / np.linalg.norm(weights)),
                 "projection_norm_before": float(np.linalg.norm(before_projection)),

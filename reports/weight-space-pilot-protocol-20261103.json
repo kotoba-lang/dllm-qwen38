@@ -1,0 +1,360 @@
+{
+  "issue": "JUN-800 / JUN-801",
+  "status": "frozen exploratory protocols; candidate scores pending",
+  "lane": "quantized causal AR, greedy, thinking off, output cap1024; not BF16, official thinking, diffusion or held-out qualification",
+  "qwen": {
+    "protocol": {
+      "hypothesis": "A late residual feature associated with rechecking after a computed solution may sustain unfinished explanations under a fixed token budget. Projection removal is exploratory and may also remove valid uncertainty; controls and untouched validation are required.",
+      "selection": "The three GSM8K dev cap hits; paired within each same generated explanation before and after reopening interpretation. One identical correct-prefix duplicate pair checks memory reset.",
+      "qualification": "Teacher-forced text-prefix probes, not exact replay of original token-state history. No held-out/test inputs.",
+      "source_results_sha256": "4cea2524bf0bbcdf07352f1d88a7e22ab072f4507fd1ef0ed2dece2e1a0fb13a",
+      "inputs": [
+        {
+          "prompt_index": 0,
+          "case_id": "002c706edc1e06cd87a6",
+          "phase": "solution",
+          "character_cut": 553,
+          "file": "03-solution.txt",
+          "sha256": "622a8e09565cc41bd23485fd4ec8171db79b73c1d91fc4d148fb7a97a0d8071f"
+        },
+        {
+          "prompt_index": 1,
+          "case_id": "002c706edc1e06cd87a6",
+          "phase": "recheck",
+          "character_cut": 2938,
+          "file": "03-recheck.txt",
+          "sha256": "7adb1c34706172088246a0b3265d17bc2024b6ab98cc76b18039352e67509a9c"
+        },
+        {
+          "prompt_index": 2,
+          "case_id": "0058a02125f666a9ced2",
+          "phase": "solution",
+          "character_cut": 3243,
+          "file": "13-solution.txt",
+          "sha256": "9ddaa4123f02efb349508eddce375d578bc95409f75d1eb22ad6856d8f5c317b"
+        },
+        {
+          "prompt_index": 3,
+          "case_id": "0058a02125f666a9ced2",
+          "phase": "recheck",
+          "character_cut": 3380,
+          "file": "13-recheck.txt",
+          "sha256": "3261c38d19e176b5f4359053ff98b36683d4129cd790f7a2cd895fcb00196b14"
+        },
+        {
+          "prompt_index": 4,
+          "case_id": "007238e71f6e66175820",
+          "phase": "solution",
+          "character_cut": 3542,
+          "file": "18-solution.txt",
+          "sha256": "8888be3ba9eda342aa6f69d486c411c12fff41cdf43560a631899f09d148bfc9"
+        },
+        {
+          "prompt_index": 5,
+          "case_id": "007238e71f6e66175820",
+          "phase": "recheck",
+          "character_cut": 3616,
+          "file": "18-recheck.txt",
+          "sha256": "92618993aad24192ee80869d7a09050947c453088687da801897a1d878a764e0"
+        },
+        {
+          "prompt_index": 6,
+          "case_id": "00011069db164cff296a",
+          "phase": "identical-normal-reset-control",
+          "file": "normal-reset-control.txt",
+          "sha256": "922ca8d50c32c63414a22532748de199b200a345ce7b1d518f1d49c8e01a6ebe"
+        },
+        {
+          "prompt_index": 7,
+          "case_id": "00011069db164cff296a",
+          "phase": "identical-normal-reset-control",
+          "file": "normal-reset-control.txt",
+          "sha256": "922ca8d50c32c63414a22532748de199b200a345ce7b1d518f1d49c8e01a6ebe"
+        }
+      ],
+      "initial_edit": {
+        "tensor": "blk.39.ffn_down_shexp.weight",
+        "strength": 0.25,
+        "direction": "normalize(mean(normalize(h_recheck-h_solution) per pair))",
+        "control_tolerance_max_abs": 1e-05,
+        "later_variants": "No variant chosen from validation or test results."
+      }
+    },
+    "observation": {
+      "capture_status": {
+        "prefill_api_calls": 8,
+        "prompt_tokens": 6139,
+        "first_layer_graph_visits": 50,
+        "generated_tokens": 0,
+        "captured_tensors": 150,
+        "process_exit": 0,
+        "capture_failed": false
+      },
+      "loader_accounting": {
+        "capture_status": {
+          "prefill_api_calls": 8,
+          "prompt_tokens": 6139,
+          "first_layer_graph_visits": 50,
+          "generated_tokens": 0,
+          "captured_tensors": 150,
+          "process_exit": 0,
+          "capture_failed": false
+        },
+        "empty_microbatch_outputs": 42,
+        "nonempty_final_vectors": 24
+      },
+      "layers": {
+        "31": {
+          "pair_delta_norms": [
+            6.5190863609313965,
+            7.346841812133789,
+            5.4834489822387695
+          ],
+          "pair_cosines": [
+            0.2573549151420593,
+            0.22362199425697327,
+            0.5596349239349365
+          ],
+          "mean_pair_cosine": 0.34687061111132306,
+          "reset_control_max_abs": 0.0
+        },
+        "35": {
+          "pair_delta_norms": [
+            10.953420639038086,
+            11.057441711425781,
+            9.051104545593262
+          ],
+          "pair_cosines": [
+            0.13050620257854462,
+            0.06026726961135864,
+            0.4904560446739197
+          ],
+          "mean_pair_cosine": 0.22707650562127432,
+          "reset_control_max_abs": 0.0
+        },
+        "39": {
+          "pair_delta_norms": [
+            18.57619285583496,
+            17.78513526916504,
+            13.204200744628906
+          ],
+          "pair_cosines": [
+            0.0661802738904953,
+            0.062208086252212524,
+            0.2831091284751892
+          ],
+          "mean_pair_cosine": 0.137165829539299,
+          "reset_control_max_abs": 0.0
+        }
+      }
+    },
+    "edit_integrity": {
+      "sham": {
+        "state": "complete",
+        "source_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+        "spec_sha256": "79d456e857a8fd9b3ba8db4033a2d934aab36985ff5f7b87154b608be4711f48",
+        "hypothesis": "Exploratory rechecking-axis removal from the last shared expert; no new math capability claim",
+        "edits": [
+          {
+            "tensor": "blk.39.ffn_down_shexp.weight",
+            "type": "Q8_0",
+            "shape": [
+              512,
+              2048
+            ],
+            "strength": 0.0,
+            "direction_sha256": "e5629f4f3d226e4b630e5827c3fb4a9974f2dbfc617e9ce1ebf6f26fc4d55294",
+            "parameters_touched": 1048576,
+            "logical_values_changed": 0,
+            "delta_l2": 0.0,
+            "relative_delta_l2": 0.0,
+            "projection_norm_before": 0.35120782256126404,
+            "projection_norm_after": 0.35120782256126404,
+            "byte_range": [
+              20112119808,
+              20113233920
+            ]
+          }
+        ],
+        "copy_method": "APFS clonefile",
+        "candidate_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+        "unchanged_ranges_sha256": "76ab908c581225926ec1c397023e361594932f541d7b21fbd2b4e6fcca36e22a",
+        "original_preserved": true,
+        "bytes_outside_declared_tensors_equal": true
+      },
+      "projection025": {
+        "state": "complete",
+        "source_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+        "spec_sha256": "6ef68356ec6aa5cd2c595431168a97b4ffdcf497d0b3c3516d857e2659c37fcd",
+        "hypothesis": "Exploratory rechecking-axis removal from the last shared expert; no new math capability claim",
+        "edits": [
+          {
+            "tensor": "blk.39.ffn_down_shexp.weight",
+            "type": "Q8_0",
+            "shape": [
+              512,
+              2048
+            ],
+            "strength": 0.25,
+            "direction_sha256": "e5629f4f3d226e4b630e5827c3fb4a9974f2dbfc617e9ce1ebf6f26fc4d55294",
+            "parameters_touched": 1048576,
+            "logical_values_changed": 843015,
+            "delta_l2": 0.09118517488241196,
+            "relative_delta_l2": 0.01213928498327732,
+            "projection_norm_before": 0.35120782256126404,
+            "projection_norm_after": 0.26918214559555054,
+            "byte_range": [
+              20112119808,
+              20113233920
+            ]
+          }
+        ],
+        "copy_method": "APFS clonefile",
+        "candidate_sha256": "23f9178a90a986c65471108becabe0d96525dc65cb12161f4dcd72ea047cb109",
+        "unchanged_ranges_sha256": "76ab908c581225926ec1c397023e361594932f541d7b21fbd2b4e6fcca36e22a",
+        "original_preserved": true,
+        "bytes_outside_declared_tensors_equal": true
+      },
+      "random-matched": {
+        "state": "complete",
+        "source_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+        "spec_sha256": "4fefcdc26ed63f77feebeaac8a278cc069aad6320134a29aff4d17de7035b472",
+        "hypothesis": "Exploratory rechecking-axis removal from the last shared expert; no new math capability claim",
+        "edits": [
+          {
+            "tensor": "blk.39.ffn_down_shexp.weight",
+            "type": "Q8_0",
+            "shape": [
+              512,
+              2048
+            ],
+            "strength": 0.52227783203125,
+            "direction_sha256": "6ecbb492f54bbe11e8bf5de41ac449bdee60dfa192011279e8d2551fe8438623",
+            "parameters_touched": 1048576,
+            "logical_values_changed": 902041,
+            "delta_l2": 0.09118513762950897,
+            "relative_delta_l2": 0.012139280326664448,
+            "projection_norm_before": 0.16766737401485443,
+            "projection_norm_after": 0.08509783446788788,
+            "byte_range": [
+              20112119808,
+              20113233920
+            ]
+          }
+        ],
+        "copy_method": "APFS clonefile",
+        "candidate_sha256": "9652378baa0408cadcfffba6ac69c88138cfea95b5c15c914c4eb3ef747dd5c5",
+        "unchanged_ranges_sha256": "76ab908c581225926ec1c397023e361594932f541d7b21fbd2b4e6fcca36e22a",
+        "original_preserved": true,
+        "bytes_outside_declared_tensors_equal": true
+      }
+    },
+    "random_matching": {
+      "seed": 797,
+      "relative_l2_error": 4.085412243016335e-07,
+      "random_strength": 0.52227783203125,
+      "note": "Same declared tensor budget; actual changed-value counts are reported separately, not assumed identical."
+    }
+  },
+  "clover": {
+    "protocol": {
+      "hypothesis": "Late verification after a computed solution may sustain an unfinished explanation within the fixed output budget. This is a weak exploratory obstruction hypothesis, not proof of looping or deficient reasoning.",
+      "selection": "Three manually inspected hard MATH development cap hits with a correct numerical solution before further checking. The separate verified arithmetic-error case is a screen guard, not a direction source.",
+      "qualification": "Teacher-forced text prefixes; not exact token-history replay. Position and length confounding remains. No validation or final test cases.",
+      "source_results_sha256": "a3e253e454d26331830fb9488bde4e3e550223d2f509a3ad8f3141c4a6b89c1d",
+      "inputs": [
+        {
+          "prompt_index": 0,
+          "case_id": "00ca5df429d4dd9925aa",
+          "phase": "solution",
+          "character_cut": 1845,
+          "file": "08-solution.txt",
+          "sha256": "11723cf8e1dbb6026f8645c04edeccc597bcbe09993072de67f670a286e0569a"
+        },
+        {
+          "prompt_index": 1,
+          "case_id": "00ca5df429d4dd9925aa",
+          "phase": "recheck",
+          "character_cut": 2189,
+          "file": "08-recheck.txt",
+          "sha256": "91ab28f5de254f9b28c026b47c7c68f8a981c4b3534e6b39298207c38037b193"
+        },
+        {
+          "prompt_index": 2,
+          "case_id": "03473ca2121a8b3bf0c7",
+          "phase": "solution",
+          "character_cut": 2283,
+          "file": "24-solution.txt",
+          "sha256": "a6788441e61267ca4b64e11069595c23e5f82d6eca57575b7d0d621bc7b4ecc6"
+        },
+        {
+          "prompt_index": 3,
+          "case_id": "03473ca2121a8b3bf0c7",
+          "phase": "recheck",
+          "character_cut": 2408,
+          "file": "24-recheck.txt",
+          "sha256": "bf90211e7c0740631f7331f029dcc5a123e9dc396be6543496c98d70ff564102"
+        },
+        {
+          "prompt_index": 4,
+          "case_id": "039cb93f5116397c47c7",
+          "phase": "solution",
+          "character_cut": 2404,
+          "file": "25-solution.txt",
+          "sha256": "c53bd4964bbef4e43c3c75c6c4815d7a520b1c37217dba366c4785f5db8477c3"
+        },
+        {
+          "prompt_index": 5,
+          "case_id": "039cb93f5116397c47c7",
+          "phase": "recheck",
+          "character_cut": 2446,
+          "file": "25-recheck.txt",
+          "sha256": "df24aa81cb1d0a70422af5996d45c40f9fafc8a605d1edacaa302ec91dd3e00e"
+        },
+        {
+          "prompt_index": 6,
+          "case_id": "000f1abde922ab8c0004",
+          "phase": "identical-normal-reset-control",
+          "file": "normal-reset-control.txt",
+          "sha256": "edd9539e6c436e5375c1098d8ee601c9b4804e073c91552bebf818d76e88d209"
+        },
+        {
+          "prompt_index": 7,
+          "case_id": "000f1abde922ab8c0004",
+          "phase": "identical-normal-reset-control",
+          "file": "normal-reset-control.txt",
+          "sha256": "edd9539e6c436e5375c1098d8ee601c9b4804e073c91552bebf818d76e88d209"
+        }
+      ],
+      "initial_edit": {
+        "tensor": "blk.39.ffn_down_shexp.weight",
+        "strength": 0.25,
+        "direction": "normalize(mean(normalize(h_recheck-h_solution) per pair))",
+        "minimum_mean_pair_cosine": 0.05,
+        "control_tolerance_max_abs": 1e-05
+      },
+      "screen_indices": [
+        0,
+        1,
+        8,
+        9,
+        24,
+        25,
+        30,
+        31
+      ],
+      "decision": "If the predeclared layer39 consistency or duplicate reset gate fails, do not edit or search other layers on these observations."
+    },
+    "worker_sha256": "1a09f2b2716c9740ce5612364ef03070e42969bea1c2c7962c0502908c62651d",
+    "capture_binary_sha256": "429c2d1ccf20421b889b4ce0307133902b054932560ea8aabd6f41d39f240849",
+    "capture_source_sha256": "97464a5b3c0a435d97e8b5d8d5d86d49daf812161d482b5328d21459a365ea29",
+    "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+  },
+  "controls": [
+    "original repeated baseline",
+    "zero-strength sham (must preserve complete checkpoint hash)",
+    "random direction matched by observed quantized delta norm, same tensor budget",
+    "concise prompt with original weights, descriptive separate comparison"
+  ],
+  "decision": "No test inputs. Do not search alternative layers if frozen layer39 gate fails. An eight-case selected screen cannot establish general improvement. Preserve all failures."
+}

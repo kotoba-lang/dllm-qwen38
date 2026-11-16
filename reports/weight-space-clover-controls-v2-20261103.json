@@ -1,0 +1,224 @@
+{
+  "issue": "JUN-801",
+  "status": "complete Clover v2 control integrity and matching; generation scores pending",
+  "comparison_manifest": {
+    "reason": "Q4_0 re-encoding drift discovered before any Clover screen scores; six explicit controls replace five ambiguous controls",
+    "worker_sha256": "07934afd4053d5ee43276ecf0e7883d7626f49343a3fb92e6e175d1089deacf0",
+    "surgery_sha256": "6910e117175226070b2b042cb871a85eb7dd5b235721ccf0c93f210d52de6e41",
+    "observation_manifest_sha256": "2352ad268271986147c8e65f6582bdf5e315cc8c957d3a88ac030f6125cd7b97",
+    "screen_sha256": {
+      "plain.json": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+      "concise.json": "fbb5bb8c8b55a685e33fa3a1764616e225c02b4ff9ca59b3149a844793611f9d"
+    },
+    "primary_attribution_baseline": "requantize-only",
+    "random_match_reference": "requantize-only incremental quantized L2; original-relative delta separately reported",
+    "reuse": "Verified complete projection025 and encoding-only copies from v1; no repeated capture. Interrupted old random is excluded.",
+    "score_exposure": 0,
+    "variants": [
+      "baseline",
+      "no-op",
+      "requantize-only",
+      "projection025",
+      "random-increment-matched",
+      "prompt-concise"
+    ]
+  },
+  "matching": {
+    "seed": 797,
+    "reference": "requantization-only",
+    "projection_incremental_l2": 0.14234961569309235,
+    "random_incremental_l2": 0.14236551523208618,
+    "relative_incremental_error": 0.0001116935856582505,
+    "random_strength": 0.5368690490722656,
+    "projection_original_l2": 0.28411421179771423,
+    "random_original_l2": 0.2853400409221649,
+    "requantization_original_l2": 0.27761775255203247,
+    "note": "Same tensor budget. Original-relative norms are reported, not assumed matched."
+  },
+  "journals": {
+    "no-op": {
+      "state": "complete",
+      "source_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "spec_sha256": "37684dff649fc580cf9d8de8a9b6484247ed3f31b17ecc986cbb35e41e033c40",
+      "hypothesis": "Separate projection from observed Q4_0 encoding drift; frozen before Clover scores",
+      "edits": [
+        {
+          "tensor": "blk.39.ffn_down_shexp.weight",
+          "type": "Q4_0",
+          "shape": [
+            512,
+            2048
+          ],
+          "strength": 0.0,
+          "direction_sha256": "ac9e543e2d4aea153e960b42394786fb8ca728e1ae520dfa3772ec6ae8e67eb0",
+          "operation": "no_op",
+          "parameters_touched": 1048576,
+          "logical_values_changed": 0,
+          "delta_l2": 0.0,
+          "relative_delta_l2": 0.0,
+          "projection_norm_before": 0.3795832097530365,
+          "projection_norm_after": 0.3795832097530365,
+          "byte_range": [
+            19281036704,
+            19281626528
+          ]
+        }
+      ],
+      "copy_method": "APFS clonefile",
+      "candidate_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "unchanged_ranges_sha256": "c95a3804473a744b5006dd9873798de332868b92fbd5931827af5e8d34aa9e76",
+      "original_preserved": true,
+      "bytes_outside_declared_tensors_equal": true
+    },
+    "requantize-only": {
+      "state": "complete",
+      "source_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "spec_sha256": "79d456e857a8fd9b3ba8db4033a2d934aab36985ff5f7b87154b608be4711f48",
+      "hypothesis": "Exploratory rechecking-axis removal from the last shared expert; no new math capability claim",
+      "edits": [
+        {
+          "tensor": "blk.39.ffn_down_shexp.weight",
+          "type": "Q4_0",
+          "shape": [
+            512,
+            2048
+          ],
+          "strength": 0.0,
+          "direction_sha256": "ac9e543e2d4aea153e960b42394786fb8ca728e1ae520dfa3772ec6ae8e67eb0",
+          "parameters_touched": 1048576,
+          "logical_values_changed": 169378,
+          "delta_l2": 0.27761775255203247,
+          "relative_delta_l2": 0.03769638389348984,
+          "projection_norm_before": 0.3795832097530365,
+          "projection_norm_after": 0.3777942657470703,
+          "byte_range": [
+            19281036704,
+            19281626528
+          ]
+        }
+      ],
+      "copy_method": "APFS clonefile",
+      "candidate_sha256": "4b574153f571cf7305cbe1feafcc9c13c9fd8c5dd4dd6f44c1d797aa6048b99b",
+      "unchanged_ranges_sha256": "c95a3804473a744b5006dd9873798de332868b92fbd5931827af5e8d34aa9e76",
+      "original_preserved": true,
+      "bytes_outside_declared_tensors_equal": true
+    },
+    "projection025": {
+      "state": "complete",
+      "source_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "spec_sha256": "6ef68356ec6aa5cd2c595431168a97b4ffdcf497d0b3c3516d857e2659c37fcd",
+      "hypothesis": "Exploratory rechecking-axis removal from the last shared expert; no new math capability claim",
+      "edits": [
+        {
+          "tensor": "blk.39.ffn_down_shexp.weight",
+          "type": "Q4_0",
+          "shape": [
+            512,
+            2048
+          ],
+          "strength": 0.25,
+          "direction_sha256": "ac9e543e2d4aea153e960b42394786fb8ca728e1ae520dfa3772ec6ae8e67eb0",
+          "parameters_touched": 1048576,
+          "logical_values_changed": 725959,
+          "delta_l2": 0.28411421179771423,
+          "relative_delta_l2": 0.03857850655913353,
+          "projection_norm_before": 0.3795832097530365,
+          "projection_norm_after": 0.3541329503059387,
+          "byte_range": [
+            19281036704,
+            19281626528
+          ]
+        }
+      ],
+      "copy_method": "APFS clonefile",
+      "candidate_sha256": "87ed108a00aaea988e0b063af305d9c06df4ec90198ccf735781d8a8a055669d",
+      "unchanged_ranges_sha256": "c95a3804473a744b5006dd9873798de332868b92fbd5931827af5e8d34aa9e76",
+      "original_preserved": true,
+      "bytes_outside_declared_tensors_equal": true
+    },
+    "random-increment-matched": {
+      "state": "complete",
+      "source_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "spec_sha256": "01b370aed214ef7efe75c238fef7be79e5831ac23262c125734e820f6e24df72",
+      "hypothesis": "Separate projection from observed Q4_0 encoding drift; frozen before Clover scores",
+      "edits": [
+        {
+          "tensor": "blk.39.ffn_down_shexp.weight",
+          "type": "Q4_0",
+          "shape": [
+            512,
+            2048
+          ],
+          "strength": 0.5368690490722656,
+          "direction_sha256": "6ecbb492f54bbe11e8bf5de41ac449bdee60dfa192011279e8d2551fe8438623",
+          "operation": "projection",
+          "parameters_touched": 1048576,
+          "logical_values_changed": 760599,
+          "delta_l2": 0.2853400409221649,
+          "relative_delta_l2": 0.038744956254959106,
+          "projection_norm_before": 0.1664612740278244,
+          "projection_norm_after": 0.13979710638523102,
+          "byte_range": [
+            19281036704,
+            19281626528
+          ]
+        }
+      ],
+      "copy_method": "APFS clonefile",
+      "candidate_sha256": "b02befab9634f7b9f26bdb22654553f701eb9ec98e780f65db003da8a851914f",
+      "unchanged_ranges_sha256": "c95a3804473a744b5006dd9873798de332868b92fbd5931827af5e8d34aa9e76",
+      "original_preserved": true,
+      "bytes_outside_declared_tensors_equal": true
+    }
+  },
+  "actual_tensor_metrics": {
+    "baseline": {
+      "delta_l2_from_original": 0.0,
+      "max_abs_from_original": 0.0,
+      "values_changed_from_original": 0,
+      "delta_l2_from_encoding_control": 0.27761775255203247,
+      "max_abs_from_encoding_control": 0.01116180419921875,
+      "values_changed_from_encoding_control": 169378
+    },
+    "no-op": {
+      "delta_l2_from_original": 0.0,
+      "max_abs_from_original": 0.0,
+      "values_changed_from_original": 0,
+      "delta_l2_from_encoding_control": 0.27761775255203247,
+      "max_abs_from_encoding_control": 0.01116180419921875,
+      "values_changed_from_encoding_control": 169378
+    },
+    "requantize-only": {
+      "delta_l2_from_original": 0.27761775255203247,
+      "max_abs_from_original": 0.01116180419921875,
+      "values_changed_from_original": 169378,
+      "delta_l2_from_encoding_control": 0.0,
+      "max_abs_from_encoding_control": 0.0,
+      "values_changed_from_encoding_control": 0
+    },
+    "projection025": {
+      "delta_l2_from_original": 0.28411421179771423,
+      "max_abs_from_original": 0.01126861572265625,
+      "values_changed_from_original": 725959,
+      "delta_l2_from_encoding_control": 0.14234961569309235,
+      "max_abs_from_encoding_control": 0.01125335693359375,
+      "values_changed_from_encoding_control": 700335
+    },
+    "random-increment-matched": {
+      "delta_l2_from_original": 0.2853400409221649,
+      "max_abs_from_original": 0.01068115234375,
+      "values_changed_from_original": 760599,
+      "delta_l2_from_encoding_control": 0.14236551523208618,
+      "max_abs_from_encoding_control": 0.01169586181640625,
+      "values_changed_from_encoding_control": 739640
+    }
+  },
+  "storage_budget": {
+    "declared_tensor_scalar_count": 1048576,
+    "all_gguf_stored_tensor_scalar_count": 34661350848,
+    "declared_fraction_of_stored_scalars": 3.0252023488591302e-05,
+    "note": "Denominator includes all stored tensors, including diffusion tensors not exercised by causal AR. This is not an active-parameter count."
+  },
+  "verification": "Complete original/no-op SHA equality, all journal preservation checks, read-only dequantized tensor comparisons, actual incremental norm tolerance <=5%.",
+  "qualification": "These are artifact/mechanical checks; they do not establish model improvement."
+}

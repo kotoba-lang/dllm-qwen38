@@ -1,0 +1,128 @@
+{
+  "issue": "JUN-799",
+  "date": "2026-11-04",
+  "state": "Frozen and queued; no cap-diagnostic inference started.",
+  "objective": "Development-only output-cap diagnostic: distinguish normal long checking from persistent repetition without touching weights or validation.",
+  "selection": "For each model, first4 limit-hit cases in original hard-integer MATH development32 order; fixed before extra inference.",
+  "protocol_sha256": "7d727e7a5624e86e60c20e9a07337f29c7b56ae5e9ca33da829983b47466c006",
+  "worker_sha256": "c52106950cea2c4d7e94c8f6a78f3c2670c9288cd964016cc9af036518e9ab7f",
+  "source_sha256": {
+    "bench.py": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9",
+    "launch.py": "effe2a93a01240a68012c843e9420809c26068cb9ebfd75059e25f16824f71c5",
+    "collect.py": "34c7d3ca06fe63ce24f6c95e036e9a271bb8443b3e85e3186d74cb129d63a277"
+  },
+  "predecessor": "Exact-identity meter worker14411; require completed-target-meter or completed-with-output-differences, both model profiles completed and no child. Then recheck all validation engine shutdown records.",
+  "max_generated_tokens": 32768,
+  "post_predecessor_wall_budget_seconds": 7200,
+  "request_timeout_seconds": 900,
+  "per_run_timeout_seconds": 3600,
+  "profiles": [
+    {
+      "name": "qwen",
+      "case_ids": [
+        "005bd82447f9945a2b87",
+        "00a3ea9b94091f90df12",
+        "00b723d88936ed7b33ff",
+        "00ca5df429d4dd9925aa"
+      ],
+      "unique_model_problem_pairs": 4,
+      "max_recorded_prompt_tokens": 87,
+      "source_results_sha256": "75e7df8e9ff9f3d3727a65522bd18ad9c855af0ef208e1d3417fd7e3008a9dcb",
+      "data_sha256": "c38bfb5cb9b6a8aa528c8d1f9d18b862037946f4368b958849ec5ff651a06b22",
+      "model_sha256": "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+      "engine_sha256": "2f66124c98a00ee3cd7e0728442604d7bac1d2ff718bb1007ec0349e0ecb5812",
+      "backend_commit": "749db7f034d43d6de01a01f6d8c872d02afa6c7b",
+      "engine_args": [
+        "-c",
+        "4096",
+        "-np",
+        "1",
+        "-b",
+        "512",
+        "-ub",
+        "256",
+        "-ngl",
+        "99",
+        "-t",
+        "6",
+        "-tb",
+        "6",
+        "--poll",
+        "0",
+        "--flash-attn",
+        "on",
+        "--no-warmup",
+        "--fit",
+        "off",
+        "--no-webui"
+      ],
+      "thinking": "off",
+      "caps": [
+        1024,
+        3072
+      ]
+    },
+    {
+      "name": "clover",
+      "case_ids": [
+        "00a3ea9b94091f90df12",
+        "00b723d88936ed7b33ff",
+        "00ca5df429d4dd9925aa",
+        "010929c71f83399ac2f2"
+      ],
+      "unique_model_problem_pairs": 4,
+      "max_recorded_prompt_tokens": 206,
+      "source_results_sha256": "a3e253e454d26331830fb9488bde4e3e550223d2f509a3ad8f3141c4a6b89c1d",
+      "data_sha256": "d7af79e1f715bd45e61e536bcedbb3e73c508f2104ec9e39380af453e6b70af9",
+      "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+      "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+      "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+      "engine_args": [
+        "-c",
+        "4096",
+        "-np",
+        "1",
+        "-b",
+        "512",
+        "-ub",
+        "256",
+        "-ngl",
+        "99",
+        "-t",
+        "6",
+        "-tb",
+        "6",
+        "--poll",
+        "0",
+        "--flash-attn",
+        "on",
+        "--no-warmup",
+        "--fit",
+        "off",
+        "--no-webui",
+        "--n-cpu-moe",
+        "4"
+      ],
+      "thinking": "off",
+      "caps": [
+        1024,
+        3072
+      ]
+    }
+  ],
+  "guards": [
+    "Original1024 replay must match response text, prompt SHA and available token IDs before3072 extension.",
+    "Reference scorer/model/backend/settings/context and full engine profile must match.",
+    "Between1024/3072, only n_predict and condition labels may differ; strict completed-run collection has no weight-only paired comparison for different caps.",
+    "Extended response must preserve the original text prefix and available token prefix; mismatches preserve evidence and stop qualification.",
+    "All source/input hashes are rechecked before each job; timeout/interrupt stops only owned child process groups."
+  ],
+  "limitations": [
+    "Four failure-selected development cases per model, five unique questions total; not independent validation or final test.",
+    "The only intended run change is cap1024 to3072; not a weight-edit benefit or official sampling evaluation.",
+    "Require exact original1024 replay before extension; compare textual prefix and token IDs when available.",
+    "Repetition metrics are descriptive, not automatic proof of a loop; manual development-only trace review remains necessary.",
+    "No further candidate selection or weight tuning is authorized from validation."
+  ],
+  "verification": "Worker syntax checked; initial frozen source/input verification passed; live waiting worker confirmed."
+}

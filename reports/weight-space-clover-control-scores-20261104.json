@@ -1,0 +1,375 @@
+{
+  "issue": "JUN-801",
+  "date": "2026-11-04",
+  "status": "completed Clover original/no-op/encoding-only controls; candidate and random comparisons pending",
+  "bundle": {
+    "schema": "wsp.completed-run-bundle/v1",
+    "plan_sha256": "aac216cdebacdb8b4e5fbc77b8f63cc3123031cb080496c1c5b3c6907659c9f2",
+    "collector_sha256": "34c7d3ca06fe63ce24f6c95e036e9a271bb8443b3e85e3186d74cb129d63a277",
+    "comparison_code_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9",
+    "qualification": "completed controls of selected development screen; candidate comparison pending",
+    "runs": {
+      "baseline": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+          "case_ids": [
+            "000f1abde922ab8c0004",
+            "005bd82447f9945a2b87",
+            "00ca5df429d4dd9925aa",
+            "010929c71f83399ac2f2",
+            "03473ca2121a8b3bf0c7",
+            "039cb93f5116397c47c7",
+            "0415204aac1b37e30844",
+            "04165c8e50f8574d5d57"
+          ],
+          "split": "exploratory-dev-selected-screen",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+          "condition": "clover-v2-screen-baseline",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 8,
+          "correct": 2,
+          "accuracy": 0.25,
+          "wall_seconds": 705.2043308741413,
+          "generated_tokens": 7579,
+          "seconds_per_correct": 352.60216543707065,
+          "tokens_per_correct": 3789.5,
+          "limit_hits": 6,
+          "no_final_answer": 6
+        },
+        "artifact_sha256": {
+          "manifest.json": "660e72bfd2c90de400b400c72a78ba358940e344a535ecce88b55065988ac263",
+          "launch.json": "75b643c6cb710996a7000e0096c62eea072bbaec5732aa2b669f217ea5f88305",
+          "process-status.json": "52bbd937076d5363b8e33c1000a6943c2d050d720fd75569fa70bdd7e9f8e126",
+          "results.jsonl": "954296bcb511f50c76c698f2a135258da042bae71198eb682f088743edc27924",
+          "summary.json": "3ff564584ac61ad933af088e7348b929236a179c46976af23d9c1eb1edc962e6"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "no-op": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+          "case_ids": [
+            "000f1abde922ab8c0004",
+            "005bd82447f9945a2b87",
+            "00ca5df429d4dd9925aa",
+            "010929c71f83399ac2f2",
+            "03473ca2121a8b3bf0c7",
+            "039cb93f5116397c47c7",
+            "0415204aac1b37e30844",
+            "04165c8e50f8574d5d57"
+          ],
+          "split": "exploratory-dev-selected-screen",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "3e2cf14ca47f6e41c251f08237ac79cd37ad81a2ea2a220fff731e34c66930d5",
+          "condition": "clover-v2-screen-no-op",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 8,
+          "correct": 2,
+          "accuracy": 0.25,
+          "wall_seconds": 764.3252087912988,
+          "generated_tokens": 7579,
+          "seconds_per_correct": 382.1626043956494,
+          "tokens_per_correct": 3789.5,
+          "limit_hits": 6,
+          "no_final_answer": 6
+        },
+        "artifact_sha256": {
+          "manifest.json": "968deb840f3d16135ba84036b9675486e1e6dbe30ae5aad4cc3adf9110e9163f",
+          "launch.json": "ac5f54c60a5a5c9dc639c54d2cda4866b074dfdedae56d92ac4672db7164e1ca",
+          "process-status.json": "4fa40bfb60754cd47d34be31b7d15547c3a4c6376028b7ba034a7e60925e1736",
+          "results.jsonl": "95ec86095adf02b1f7954d70bb331a5846ac3c306fdba1610b7ebe8588897411",
+          "summary.json": "012050e58baa21c9fb8693e91ef408b8babdee6812dfdb66a9b42abdaf12f119"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      },
+      "requantize-only": {
+        "identity": {
+          "schema": "wsp.local-run/v1",
+          "data_sha256": "ae270d005d0fafe5cb886f17f2031e4445ccfc62ea9d1020a60c966220da163e",
+          "case_ids": [
+            "000f1abde922ab8c0004",
+            "005bd82447f9945a2b87",
+            "00ca5df429d4dd9925aa",
+            "010929c71f83399ac2f2",
+            "03473ca2121a8b3bf0c7",
+            "039cb93f5116397c47c7",
+            "0415204aac1b37e30844",
+            "04165c8e50f8574d5d57"
+          ],
+          "split": "exploratory-dev-selected-screen",
+          "settings": {
+            "n_predict": 1024,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "seed": 42,
+            "cache_prompt": false,
+            "stream": false
+          },
+          "thinking": "off",
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+          "server_context": 4096,
+          "model_sha256": "4b574153f571cf7305cbe1feafcc9c13c9fd8c5dd4dd6f44c1d797aa6048b99b",
+          "condition": "clover-v2-screen-requantize-only",
+          "bench_sha256": "ac513f2a29a776bff4158274ed30a97a140d78a710a4606d8d5c3e4cbc3979e9"
+        },
+        "summary": {
+          "n": 8,
+          "correct": 3,
+          "accuracy": 0.375,
+          "wall_seconds": 538.9313796656206,
+          "generated_tokens": 7579,
+          "seconds_per_correct": 179.64379322187355,
+          "tokens_per_correct": 2526.3333333333335,
+          "limit_hits": 6,
+          "no_final_answer": 5
+        },
+        "artifact_sha256": {
+          "manifest.json": "a8d2fd2f1464a5b6a429fb52620047c83977ca962a39ac9b8cc3f40f71c86056",
+          "launch.json": "ad83c3685aa0241a50a13fbd0a4890955a3492ade099ae7e9eb565aa65b0254a",
+          "process-status.json": "4297278087f9252523b7c6bfaa8286d050a970223bc8d76077843bb18eeceac2",
+          "results.jsonl": "aca87d80d15807efc59a33dff5f71f321a4b9674f93b77e0088e795d23fa9eab",
+          "summary.json": "54d5ef923924157b23b81688d6e6e45b933f91af81630e4b4c886ee5c5d9368c"
+        },
+        "runtime": {
+          "engine_sha256": "3d90e69ea232ac80d5103e374e188178abee0d7755ebcfc253bd8fe1bb376273",
+          "engine_args": [
+            "-c",
+            "4096",
+            "-np",
+            "1",
+            "-b",
+            "512",
+            "-ub",
+            "256",
+            "-ngl",
+            "99",
+            "-t",
+            "6",
+            "-tb",
+            "6",
+            "--poll",
+            "0",
+            "--flash-attn",
+            "on",
+            "--no-warmup",
+            "--fit",
+            "off",
+            "--no-webui",
+            "--n-cpu-moe",
+            "4"
+          ],
+          "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce"
+        },
+        "engine_exit_code": 0,
+        "engine_stopped": true
+      }
+    },
+    "paired": [
+      {
+        "baseline": "baseline",
+        "candidate": "no-op",
+        "result": {
+          "baseline": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 705.2043308741413,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 352.60216543707065,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "candidate": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 764.3252087912988,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 382.1626043956494,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "paired_accuracy_delta": 0.0,
+          "bootstrap_95_interval": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      },
+      {
+        "baseline": "baseline",
+        "candidate": "requantize-only",
+        "result": {
+          "baseline": {
+            "n": 8,
+            "correct": 2,
+            "accuracy": 0.25,
+            "wall_seconds": 705.2043308741413,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 352.60216543707065,
+            "tokens_per_correct": 3789.5,
+            "limit_hits": 6,
+            "no_final_answer": 6
+          },
+          "candidate": {
+            "n": 8,
+            "correct": 3,
+            "accuracy": 0.375,
+            "wall_seconds": 538.9313796656206,
+            "generated_tokens": 7579,
+            "seconds_per_correct": 179.64379322187355,
+            "tokens_per_correct": 2526.3333333333335,
+            "limit_hits": 6,
+            "no_final_answer": 5
+          },
+          "paired_accuracy_delta": 0.125,
+          "bootstrap_95_interval": [
+            0.0,
+            0.375
+          ],
+          "wins": 1,
+          "losses": 0,
+          "mcnemar_exact_two_sided_p": 1.0,
+          "qualification": "development diagnostic; small n and selected candidates do not establish held-out improvement"
+        }
+      }
+    ],
+    "no_op": [
+      {
+        "baseline": "baseline",
+        "candidate": "no-op",
+        "checkpoint_hash_equal": true,
+        "exact_response_text_matches": 8,
+        "n": 8
+      }
+    ],
+    "limitations": [
+      "Stored grades and measured timing are aggregated; no new inference or regrading.",
+      "Completion records and hashes are checked; model files are not rehashed by this read-only collector.",
+      "Small or selected development subsets do not establish held-out improvement."
+    ]
+  },
+  "interpretation": "Encoding-only control changes development accuracy from2/8 to3/8. A candidate/original difference alone would be confounded. Attribute projection only relative to encoding-only and matched random controls.",
+  "limitations": [
+    "Selected eight development cases; this one-case difference is not statistical evidence of general improvement.",
+    "No projection, held-out validation or final-test conclusion yet."
+  ],
+  "additional_correct_case": {
+    "id": "04165c8e50f8574d5d57",
+    "expected": "240",
+    "original": "Computed240 in the explanation, then reached cap before a FINAL line.",
+    "encoding_only": "Emitted FINAL:240 at the same1024-token cap.",
+    "interpretation": "This one-case gain is earlier answer formatting within the fixed budget, not evidence of newly acquired arithmetic or geometric ability.",
+    "cap_hits": "Six in both conditions; answer extraction failures decreased from6 to5."
+  }
+}
